@@ -1,0 +1,630 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		023C0BE9F17259F30C2FE963 /* LibraryModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06B5874641A74F28DC5C45D6 /* LibraryModels.swift */; };
+		03B784F7B14A9554D86DB06D /* Chapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 933DCD1102EBB7AC50725553 /* Chapter.swift */; };
+		19D0C8F9FC06695BFE7D90E2 /* ThreadPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 501099F465AFF4BA5C12D0DA /* ThreadPanel.swift */; };
+		1D821BD0307A0C99B4152DE7 /* ReaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE16C85A2DD484EE05DCB645 /* ReaderView.swift */; };
+		27492EF07032399D617BE0C0 /* LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19FE50F25D3D54079CFB8E66 /* LibraryView.swift */; };
+		4311963A2E8BE51B05432553 /* Annotations.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E489CD45CEF897A465CC0A5 /* Annotations.swift */; };
+		50997DC49B821E6E07BE89F1 /* Chapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 933DCD1102EBB7AC50725553 /* Chapter.swift */; };
+		58A04F669F41C38DDB049244 /* ClaudeService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BDF00BB733AC1E163A68F18 /* ClaudeService.swift */; };
+		59E9E2609E122A6EE481F202 /* EPUBParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = A30C0A0AD283C97CC7C42C5B /* EPUBParser.swift */; };
+		5CA06D381DD9035E978CD35F /* EPUBParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6213CE5BC09A26E4C0A07527 /* EPUBParserTests.swift */; };
+		69C33456DC811EDDC927E82A /* LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19FE50F25D3D54079CFB8E66 /* LibraryView.swift */; };
+		837AF3C34968216F3C246A33 /* LibraryModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06B5874641A74F28DC5C45D6 /* LibraryModels.swift */; };
+		86BB17EEE44766BF56F76738 /* Book.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0720C2C43A74EF1E54DEB0C /* Book.swift */; };
+		94A9499C70665FEAA83413FF /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 330C82093A09062B3137488D /* ContentView.swift */; };
+		9B749F6C546D2DBF73BCE489 /* ClaudeService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BDF00BB733AC1E163A68F18 /* ClaudeService.swift */; };
+		9EBA4ABB0A6BD3D8DF1E7756 /* ReaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE16C85A2DD484EE05DCB645 /* ReaderView.swift */; };
+		A7369AE2C3C619DDE20ED127 /* CruxApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7957B2E496930FED00FF211 /* CruxApp.swift */; };
+		A8E8CDC483A3B4073F48817F /* MarkdownUI in Frameworks */ = {isa = PBXBuildFile; productRef = 56B896D5C1A0117AE51CF658 /* MarkdownUI */; };
+		C01FD3E7DFF8FEE77CAF2AD3 /* EPUBParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = A30C0A0AD283C97CC7C42C5B /* EPUBParser.swift */; };
+		CB48426C19AB0B6310EB7DA0 /* Annotations.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E489CD45CEF897A465CC0A5 /* Annotations.swift */; };
+		D54D907918FB7B4B8119B3E8 /* MarkdownUI in Frameworks */ = {isa = PBXBuildFile; productRef = 2309151D61BDD0655F6DE4D1 /* MarkdownUI */; };
+		E1A7FA9636E87B502E838705 /* BookStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0534663AF190E59C3DB0568F /* BookStorage.swift */; };
+		E2265A88163FB6967A2D3223 /* BookStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0534663AF190E59C3DB0568F /* BookStorage.swift */; };
+		E85A3576347EAB487C78E9CD /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 330C82093A09062B3137488D /* ContentView.swift */; };
+		F468E87894F98585125D07B5 /* Book.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0720C2C43A74EF1E54DEB0C /* Book.swift */; };
+		F74EC4467A6BB3AC186A82E3 /* ThreadPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 501099F465AFF4BA5C12D0DA /* ThreadPanel.swift */; };
+		FF70A0BB4CD24E376F117334 /* CruxApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7957B2E496930FED00FF211 /* CruxApp.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		424F2408A90C58B6C65FB48F /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 3329DF6553B3B8789B635764 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A96704F5A651CE736FAD3606;
+			remoteInfo = Crux_macOS;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		0534663AF190E59C3DB0568F /* BookStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookStorage.swift; sourceTree = "<group>"; };
+		06B5874641A74F28DC5C45D6 /* LibraryModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryModels.swift; sourceTree = "<group>"; };
+		19FE50F25D3D54079CFB8E66 /* LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryView.swift; sourceTree = "<group>"; };
+		330C82093A09062B3137488D /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		501099F465AFF4BA5C12D0DA /* ThreadPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThreadPanel.swift; sourceTree = "<group>"; };
+		5B00C0280A9B0342C485872F /* CruxTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CruxTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		5BDF00BB733AC1E163A68F18 /* ClaudeService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeService.swift; sourceTree = "<group>"; };
+		6213CE5BC09A26E4C0A07527 /* EPUBParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EPUBParserTests.swift; sourceTree = "<group>"; };
+		7E489CD45CEF897A465CC0A5 /* Annotations.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Annotations.swift; sourceTree = "<group>"; };
+		933DCD1102EBB7AC50725553 /* Chapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Chapter.swift; sourceTree = "<group>"; };
+		A30C0A0AD283C97CC7C42C5B /* EPUBParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EPUBParser.swift; sourceTree = "<group>"; };
+		A7957B2E496930FED00FF211 /* CruxApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CruxApp.swift; sourceTree = "<group>"; };
+		AE16C85A2DD484EE05DCB645 /* ReaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderView.swift; sourceTree = "<group>"; };
+		CA493534A239F527BE87B782 /* Crux.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Crux.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		E0720C2C43A74EF1E54DEB0C /* Book.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Book.swift; sourceTree = "<group>"; };
+		F8F6E727121778BB614804EC /* Crux.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Crux.app; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		C6FCEBD4FECA01DF6933764B /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D54D907918FB7B4B8119B3E8 /* MarkdownUI in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		DC30175C6DE00856EAD4A65E /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A8E8CDC483A3B4073F48817F /* MarkdownUI in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		32AC0FF16CC74355900E8886 = {
+			isa = PBXGroup;
+			children = (
+				7E9CE822509E527A35776B64 /* iOS */,
+				83315399B5FD942D2313059A /* macOS */,
+				80FD286E9537A0E80954DD26 /* Shared */,
+				7343A495A0B295FF5B1F82D0 /* Tests */,
+				E355C32B8DEC7D2A327629F7 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		5E0EA413FB80C03E939B6FE9 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				7E489CD45CEF897A465CC0A5 /* Annotations.swift */,
+				E0720C2C43A74EF1E54DEB0C /* Book.swift */,
+				933DCD1102EBB7AC50725553 /* Chapter.swift */,
+				06B5874641A74F28DC5C45D6 /* LibraryModels.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		7343A495A0B295FF5B1F82D0 /* Tests */ = {
+			isa = PBXGroup;
+			children = (
+				6213CE5BC09A26E4C0A07527 /* EPUBParserTests.swift */,
+			);
+			path = Tests;
+			sourceTree = "<group>";
+		};
+		7E9CE822509E527A35776B64 /* iOS */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = iOS;
+			sourceTree = "<group>";
+		};
+		80FD286E9537A0E80954DD26 /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				A7957B2E496930FED00FF211 /* CruxApp.swift */,
+				5E0EA413FB80C03E939B6FE9 /* Models */,
+				F333CAF5D0078D26FD5ACA03 /* Services */,
+				D82FB6FE7C6554E01A554022 /* Views */,
+			);
+			path = Shared;
+			sourceTree = "<group>";
+		};
+		83315399B5FD942D2313059A /* macOS */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = macOS;
+			sourceTree = "<group>";
+		};
+		D82FB6FE7C6554E01A554022 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				330C82093A09062B3137488D /* ContentView.swift */,
+				19FE50F25D3D54079CFB8E66 /* LibraryView.swift */,
+				AE16C85A2DD484EE05DCB645 /* ReaderView.swift */,
+				501099F465AFF4BA5C12D0DA /* ThreadPanel.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		E355C32B8DEC7D2A327629F7 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				CA493534A239F527BE87B782 /* Crux.app */,
+				F8F6E727121778BB614804EC /* Crux.app */,
+				5B00C0280A9B0342C485872F /* CruxTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		F333CAF5D0078D26FD5ACA03 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				0534663AF190E59C3DB0568F /* BookStorage.swift */,
+				5BDF00BB733AC1E163A68F18 /* ClaudeService.swift */,
+				A30C0A0AD283C97CC7C42C5B /* EPUBParser.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		991C94CDD4C6B03A1A0162AA /* CruxTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 272F7C94F50A7C83AB73EA4A /* Build configuration list for PBXNativeTarget "CruxTests" */;
+			buildPhases = (
+				D2ED5510CC6730574D7F12E9 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				BB911177AA2202FF227E5B4F /* PBXTargetDependency */,
+			);
+			name = CruxTests;
+			packageProductDependencies = (
+			);
+			productName = CruxTests;
+			productReference = 5B00C0280A9B0342C485872F /* CruxTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		A96704F5A651CE736FAD3606 /* Crux_macOS */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1099BDDB9435696771C4DE96 /* Build configuration list for PBXNativeTarget "Crux_macOS" */;
+			buildPhases = (
+				F98AC3FD0218C87A937CE83A /* Sources */,
+				C6FCEBD4FECA01DF6933764B /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Crux_macOS;
+			packageProductDependencies = (
+				2309151D61BDD0655F6DE4D1 /* MarkdownUI */,
+			);
+			productName = Crux_macOS;
+			productReference = F8F6E727121778BB614804EC /* Crux.app */;
+			productType = "com.apple.product-type.application";
+		};
+		E9EC2F1EEDA3BDED94F53A68 /* Crux_iOS */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = FF393B07BA5AC13C2CFC05A1 /* Build configuration list for PBXNativeTarget "Crux_iOS" */;
+			buildPhases = (
+				6BBC1BBAA91CA2FB3BD59839 /* Sources */,
+				DC30175C6DE00856EAD4A65E /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Crux_iOS;
+			packageProductDependencies = (
+				56B896D5C1A0117AE51CF658 /* MarkdownUI */,
+			);
+			productName = Crux_iOS;
+			productReference = CA493534A239F527BE87B782 /* Crux.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		3329DF6553B3B8789B635764 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1500;
+				TargetAttributes = {
+					991C94CDD4C6B03A1A0162AA = {
+						DevelopmentTeam = "";
+					};
+					A96704F5A651CE736FAD3606 = {
+						DevelopmentTeam = "";
+					};
+					E9EC2F1EEDA3BDED94F53A68 = {
+						DevelopmentTeam = "";
+					};
+				};
+			};
+			buildConfigurationList = 0D94C4ECF807903AA66EC4CA /* Build configuration list for PBXProject "Crux" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 32AC0FF16CC74355900E8886;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				AA2DE1D98901D255123FC975 /* XCRemoteSwiftPackageReference "swift-markdown-ui" */,
+			);
+			preferredProjectObjectVersion = 77;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				991C94CDD4C6B03A1A0162AA /* CruxTests */,
+				E9EC2F1EEDA3BDED94F53A68 /* Crux_iOS */,
+				A96704F5A651CE736FAD3606 /* Crux_macOS */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		6BBC1BBAA91CA2FB3BD59839 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				4311963A2E8BE51B05432553 /* Annotations.swift in Sources */,
+				F468E87894F98585125D07B5 /* Book.swift in Sources */,
+				E2265A88163FB6967A2D3223 /* BookStorage.swift in Sources */,
+				03B784F7B14A9554D86DB06D /* Chapter.swift in Sources */,
+				9B749F6C546D2DBF73BCE489 /* ClaudeService.swift in Sources */,
+				E85A3576347EAB487C78E9CD /* ContentView.swift in Sources */,
+				FF70A0BB4CD24E376F117334 /* CruxApp.swift in Sources */,
+				C01FD3E7DFF8FEE77CAF2AD3 /* EPUBParser.swift in Sources */,
+				837AF3C34968216F3C246A33 /* LibraryModels.swift in Sources */,
+				69C33456DC811EDDC927E82A /* LibraryView.swift in Sources */,
+				9EBA4ABB0A6BD3D8DF1E7756 /* ReaderView.swift in Sources */,
+				19D0C8F9FC06695BFE7D90E2 /* ThreadPanel.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D2ED5510CC6730574D7F12E9 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5CA06D381DD9035E978CD35F /* EPUBParserTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F98AC3FD0218C87A937CE83A /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				CB48426C19AB0B6310EB7DA0 /* Annotations.swift in Sources */,
+				86BB17EEE44766BF56F76738 /* Book.swift in Sources */,
+				E1A7FA9636E87B502E838705 /* BookStorage.swift in Sources */,
+				50997DC49B821E6E07BE89F1 /* Chapter.swift in Sources */,
+				58A04F669F41C38DDB049244 /* ClaudeService.swift in Sources */,
+				94A9499C70665FEAA83413FF /* ContentView.swift in Sources */,
+				A7369AE2C3C619DDE20ED127 /* CruxApp.swift in Sources */,
+				59E9E2609E122A6EE481F202 /* EPUBParser.swift in Sources */,
+				023C0BE9F17259F30C2FE963 /* LibraryModels.swift in Sources */,
+				27492EF07032399D617BE0C0 /* LibraryView.swift in Sources */,
+				1D821BD0307A0C99B4152DE7 /* ReaderView.swift in Sources */,
+				F74EC4467A6BB3AC186A82E3 /* ThreadPanel.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		BB911177AA2202FF227E5B4F /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A96704F5A651CE736FAD3606 /* Crux_macOS */;
+			targetProxy = 424F2408A90C58B6C65FB48F /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		0304ADD677509E57D2A261E5 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Resources/Crux.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				INFOPLIST_FILE = Resources/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.crux.app;
+				PRODUCT_NAME = Crux;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "";
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		0909CAFD44099D3C2392D92B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Resources/Crux.entitlements;
+				COMBINE_HIDPI_IMAGES = YES;
+				INFOPLIST_FILE = Resources/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.crux.app;
+				PRODUCT_NAME = Crux;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+			};
+			name = Debug;
+		};
+		26BC96C7C8FC0E1533D24919 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Resources/Crux.entitlements;
+				COMBINE_HIDPI_IMAGES = YES;
+				INFOPLIST_FILE = Resources/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.crux.app;
+				PRODUCT_NAME = Crux;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "";
+			};
+			name = Release;
+		};
+		3EAF57CC841A229C8F72535D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.crux.tests;
+				SDKROOT = macosx;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Crux.app/Contents/MacOS/Crux";
+			};
+			name = Release;
+		};
+		4D339A85008DA0AB8184C408 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.crux.tests;
+				SDKROOT = macosx;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Crux.app/Contents/MacOS/Crux";
+			};
+			name = Debug;
+		};
+		4F51CC030D0E3438959201A6 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.9;
+			};
+			name = Debug;
+		};
+		6D1529684D955A0AB26DB8D0 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Resources/Crux.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				INFOPLIST_FILE = Resources/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.crux.app;
+				PRODUCT_NAME = Crux;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		EE67B9A357BFB0C43991CFCC /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = "";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.9;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		0D94C4ECF807903AA66EC4CA /* Build configuration list for PBXProject "Crux" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4F51CC030D0E3438959201A6 /* Debug */,
+				EE67B9A357BFB0C43991CFCC /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		1099BDDB9435696771C4DE96 /* Build configuration list for PBXNativeTarget "Crux_macOS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0909CAFD44099D3C2392D92B /* Debug */,
+				26BC96C7C8FC0E1533D24919 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		272F7C94F50A7C83AB73EA4A /* Build configuration list for PBXNativeTarget "CruxTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4D339A85008DA0AB8184C408 /* Debug */,
+				3EAF57CC841A229C8F72535D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		FF393B07BA5AC13C2CFC05A1 /* Build configuration list for PBXNativeTarget "Crux_iOS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				6D1529684D955A0AB26DB8D0 /* Debug */,
+				0304ADD677509E57D2A261E5 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		AA2DE1D98901D255123FC975 /* XCRemoteSwiftPackageReference "swift-markdown-ui" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/gonzalezreal/swift-markdown-ui";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.4.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		2309151D61BDD0655F6DE4D1 /* MarkdownUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AA2DE1D98901D255123FC975 /* XCRemoteSwiftPackageReference "swift-markdown-ui" */;
+			productName = MarkdownUI;
+		};
+		56B896D5C1A0117AE51CF658 /* MarkdownUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AA2DE1D98901D255123FC975 /* XCRemoteSwiftPackageReference "swift-markdown-ui" */;
+			productName = MarkdownUI;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 3329DF6553B3B8789B635764 /* Project object */;
+}
