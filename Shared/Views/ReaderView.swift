@@ -15,6 +15,8 @@ struct ReaderView: View {
     @State private var showingAPIKeyPrompt = false
     @State private var apiKey = ""
     @State private var loadingHighlightId: UUID? = nil
+    @State private var pendingSelection: SelectionData? = nil
+    @State private var pendingHighlightId: UUID? = nil
 
     private var storedBook: StoredBook? {
         storedBooks.first { $0.id == bookId }
@@ -28,6 +30,25 @@ struct ReaderView: View {
     var currentChapterHighlights: [Highlight] {
         guard let chapter = currentChapter else { return [] }
         return annotations.highlights.filter { $0.chapterId == chapter.id }
+    }
+
+    /// Highlights to display in WebView (includes pending uncommitted selection)
+    var displayHighlights: [Highlight] {
+        var highlights = currentChapterHighlights
+
+        // Add pending selection as a temporary highlight
+        if let pending = pendingSelection, let pendingId = pendingHighlightId, let chapter = currentChapter {
+            let pendingHighlight = Highlight(
+                id: pendingId,
+                chapterId: chapter.id,
+                selectedText: pending.text,
+                surroundingContext: pending.context,
+                cfiRange: pending.cfiRange
+            )
+            highlights.append(pendingHighlight)
+        }
+
+        return highlights
     }
 
     /// Convert markdown text to HTML
@@ -63,7 +84,22 @@ struct ReaderView: View {
 
     /// Build margin note data from current highlights for passing to WebView
     var currentMarginNotes: [MarginNoteData] {
-        currentChapterHighlights.map { highlight in
+        var notes: [MarginNoteData] = []
+
+        // Add pending selection first (if any) - uncommitted
+        if let pending = pendingSelection, let pendingId = pendingHighlightId {
+            notes.append(MarginNoteData(
+                highlightId: pendingId.uuidString,
+                previewText: String(pending.text.prefix(100)),
+                isCommitted: false,
+                hasThread: false,
+                threadContent: nil,
+                isLoading: false
+            ))
+        }
+
+        // Add committed highlights for current chapter
+        for highlight in currentChapterHighlights {
             let thread = highlight.threads.first
             let isLoading = loadingHighlightId == highlight.id
 
@@ -77,14 +113,17 @@ struct ReaderView: View {
                 }.joined()
             }
 
-            return MarginNoteData(
+            notes.append(MarginNoteData(
                 highlightId: highlight.id.uuidString,
                 previewText: String(highlight.selectedText.prefix(100)),
+                isCommitted: true,
                 hasThread: thread != nil,
                 threadContent: threadContent,
                 isLoading: isLoading
-            )
+            ))
         }
+
+        return notes
     }
 
     var body: some View {
@@ -92,7 +131,7 @@ struct ReaderView: View {
             if let chapter = currentChapter {
                 EPUBWebView(
                     chapter: chapter,
-                    highlights: currentChapterHighlights,
+                    highlights: displayHighlights,
                     marginNotes: currentMarginNotes,
                     onTextSelected: { selectionData in
                         handleTextSelection(selectionData)
@@ -187,40 +226,70 @@ struct ReaderView: View {
     }
 
     private func handleTextSelection(_ selectionData: SelectionData) {
-        // Create highlight immediately when text is selected
-        guard let chapter = currentChapter else { return }
+        guard currentChapter != nil else { return }
 
-        // Check if this highlight already exists
+        // Check if this highlight already exists (committed)
         if annotations.highlights.contains(where: { $0.selectedText == selectionData.text && $0.cfiRange == selectionData.cfiRange }) {
             return
         }
 
-        // Create new highlight
+        // Store as pending (don't save yet - wait for user to click Highlight or Annotate)
+        pendingSelection = selectionData
+        pendingHighlightId = UUID()
+    }
+
+    private func clearPendingSelection() {
+        pendingSelection = nil
+        pendingHighlightId = nil
+    }
+
+    private func commitPendingHighlight() -> Highlight? {
+        guard let pending = pendingSelection,
+              let pendingId = pendingHighlightId,
+              let chapter = currentChapter else { return nil }
+
         let highlight = Highlight(
+            id: pendingId,
             chapterId: chapter.id,
-            selectedText: selectionData.text,
-            surroundingContext: selectionData.context,
-            cfiRange: selectionData.cfiRange
+            selectedText: pending.text,
+            surroundingContext: pending.context,
+            cfiRange: pending.cfiRange
         )
         annotations.addHighlight(highlight)
-
-        // Save annotations
-        Task {
-            try? await BookStorage.shared.saveAnnotations(annotations)
-        }
+        clearPendingSelection()
+        return highlight
     }
 
     private func handleMarginNoteAction(_ action: MarginNoteAction) {
         Task {
-            let isConfigured = await threadState.isConfigured
-            guard isConfigured else {
-                showingAPIKeyPrompt = true
-                return
-            }
-
             switch action {
+            case .commitHighlight(let highlightId):
+                // Commit pending selection if it matches
+                if pendingHighlightId == highlightId {
+                    if let _ = commitPendingHighlight() {
+                        try? await BookStorage.shared.saveAnnotations(annotations)
+                    }
+                }
+
             case .startThread(let highlightId):
-                guard let highlight = annotations.highlights.first(where: { $0.id == highlightId }) else { return }
+                let isConfigured = await threadState.isConfigured
+                guard isConfigured else {
+                    showingAPIKeyPrompt = true
+                    return
+                }
+
+                // If this is a pending selection, commit it first
+                var highlight: Highlight?
+                if pendingHighlightId == highlightId {
+                    highlight = commitPendingHighlight()
+                    if highlight != nil {
+                        try? await BookStorage.shared.saveAnnotations(annotations)
+                    }
+                } else {
+                    highlight = annotations.highlights.first(where: { $0.id == highlightId })
+                }
+
+                guard let highlight = highlight else { return }
 
                 // Set loading state - triggers margin note update
                 loadingHighlightId = highlightId
@@ -239,6 +308,12 @@ struct ReaderView: View {
                 loadingHighlightId = nil
 
             case .sendFollowUp(let highlightId, let message):
+                let isConfigured = await threadState.isConfigured
+                guard isConfigured else {
+                    showingAPIKeyPrompt = true
+                    return
+                }
+
                 guard let highlight = annotations.highlights.first(where: { $0.id == highlightId }) else { return }
 
                 // Set loading state
@@ -265,14 +340,20 @@ struct ReaderView: View {
                 loadingHighlightId = nil
 
             case .deleteHighlight(let highlightId):
-                annotations.removeHighlight(id: highlightId)
-                try? await BookStorage.shared.saveAnnotations(annotations)
+                // If deleting a pending selection, just clear it
+                if pendingHighlightId == highlightId {
+                    clearPendingSelection()
+                } else {
+                    annotations.removeHighlight(id: highlightId)
+                    try? await BookStorage.shared.saveAnnotations(annotations)
+                }
             }
         }
     }
 
     private func navigateToChapter(_ index: Int) {
         guard index >= 0 && index < book.chapters.count else { return }
+        clearPendingSelection()  // Discard uncommitted selection on chapter change
         currentChapterIndex = index
         saveProgress()
     }
@@ -345,6 +426,7 @@ struct WebViewRepresentable: NSViewRepresentable {
         webView.loadHTMLString(styledHTML, baseURL: nil)
         context.coordinator.lastLoadedHTML = html
         context.coordinator.pendingHighlights = highlights
+        context.coordinator.pendingMarginNotes = marginNotes
         context.coordinator.webView = webView
 
         return webView
@@ -364,10 +446,16 @@ struct WebViewRepresentable: NSViewRepresentable {
             // Also update pendingHighlights in case the page is still loading
             context.coordinator.pendingHighlights = highlights
             context.coordinator.pendingMarginNotes = marginNotes
-            context.coordinator.applyHighlights(highlights, to: webView)
+            let currentMarginNotes = marginNotes
+            context.coordinator.applyHighlights(highlights, to: webView) {
+                // Update margin notes after highlights are applied
+                context.coordinator.updateMarginNotes(currentMarginNotes)
+                context.coordinator.lastMarginNotes = currentMarginNotes
+            }
+            return
         }
 
-        // Update margin notes if they changed
+        // Update margin notes if they changed (only if highlights didn't change)
         if context.coordinator.lastMarginNotes != marginNotes {
             context.coordinator.updateMarginNotes(marginNotes)
             context.coordinator.lastMarginNotes = marginNotes
@@ -405,17 +493,13 @@ struct WebViewRepresentable: NSViewRepresentable {
 
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
             // Apply highlights and margin notes after page loads
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
-                guard let self = self else { return }
-                self.applyHighlights(self.pendingHighlights, to: webView)
-                // Apply pending margin notes after highlights
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                    self.updateMarginNotes(self.pendingMarginNotes)
-                }
+            applyHighlights(pendingHighlights, to: webView) { [weak self] in
+                // Apply pending margin notes after highlights are done
+                self?.updateMarginNotes(self?.pendingMarginNotes ?? [])
             }
         }
 
-        func applyHighlights(_ highlights: [Highlight], to webView: WKWebView) {
+        func applyHighlights(_ highlights: [Highlight], to webView: WKWebView, completion: (() -> Void)? = nil) {
             let highlightsWithCFI = highlights.compactMap { h -> [String: Any]? in
                 guard let cfi = h.cfiRange else { return nil }
                 return [
@@ -429,13 +513,17 @@ struct WebViewRepresentable: NSViewRepresentable {
 
             guard !highlightsWithCFI.isEmpty,
                   let jsonData = try? JSONSerialization.data(withJSONObject: highlightsWithCFI),
-                  let jsonString = String(data: jsonData, encoding: .utf8) else { return }
+                  let jsonString = String(data: jsonData, encoding: .utf8) else {
+                completion?()
+                return
+            }
 
             let js = "CruxHighlighter.applyHighlights(\(jsonString));"
             webView.evaluateJavaScript(js) { [weak self] _, error in
                 if error == nil {
                     self?.highlightsApplied = highlightsWithCFI.compactMap { UUID(uuidString: $0["id"] as? String ?? "") }
                 }
+                completion?()
             }
         }
 
@@ -472,6 +560,8 @@ struct WebViewRepresentable: NSViewRepresentable {
 
                 let noteAction: MarginNoteAction
                 switch action {
+                case "commitHighlight":
+                    noteAction = .commitHighlight(highlightId: highlightId)
                 case "startThread":
                     noteAction = .startThread(highlightId: highlightId)
                 case "sendFollowUp":
@@ -695,8 +785,19 @@ struct WebViewRepresentable: NSViewRepresentable {
             },
 
             applyHighlights: function(highlightsArray) {
+                // Remove highlights that are no longer in the array (e.g., old pending selection)
+                const newIds = new Set(highlightsArray.map(h => h.id));
+                for (const [id, elements] of this.highlights) {
+                    if (!newIds.has(id)) {
+                        this.removeHighlight(id);
+                    }
+                }
+
+                // Apply new highlights
                 for (const h of highlightsArray) {
-                    this.applyHighlight(h);
+                    if (!this.highlights.has(h.id)) {
+                        this.applyHighlight(h);
+                    }
                 }
             },
 
@@ -800,10 +901,12 @@ struct WebViewRepresentable: NSViewRepresentable {
         """
         const CruxMarginNotes = {
             notes: new Map(),
-            marginColumn: null,
+            marginLeft: null,
+            marginRight: null,
 
             init: function() {
-                this.marginColumn = document.querySelector('.crux-margin');
+                this.marginLeft = document.querySelector('.crux-margin-left');
+                this.marginRight = document.querySelector('.crux-margin-right');
                 this.setupEventDelegation();
             },
 
@@ -820,6 +923,16 @@ struct WebViewRepresentable: NSViewRepresentable {
                         // Immediately remove from DOM for responsive feel
                         CruxHighlighter.removeHighlight(highlightId);
                         this.removeNote(highlightId);
+                        return;
+                    }
+
+                    const commitBtn = e.target.closest('.crux-commit-highlight');
+                    if (commitBtn) {
+                        const note = commitBtn.closest('.crux-margin-note');
+                        window.webkit.messageHandlers.marginNoteAction.postMessage({
+                            action: 'commitHighlight',
+                            highlightId: note.dataset.highlightId
+                        });
                         return;
                     }
 
@@ -861,13 +974,33 @@ struct WebViewRepresentable: NSViewRepresentable {
                             });
                             input.value = '';
                         }
+                        return;
+                    }
+
+                    // Keyboard shortcuts for pending selection
+                    if (e.metaKey && this.pendingHighlightId) {
+                        if (e.key === 'h' || e.key === 'H') {
+                            e.preventDefault();
+                            window.webkit.messageHandlers.marginNoteAction.postMessage({
+                                action: 'commitHighlight',
+                                highlightId: this.pendingHighlightId
+                            });
+                        } else if (e.key === 'a' || e.key === 'A') {
+                            e.preventDefault();
+                            window.webkit.messageHandlers.marginNoteAction.postMessage({
+                                action: 'startThread',
+                                highlightId: this.pendingHighlightId
+                            });
+                        }
                     }
                 });
             },
 
+            pendingHighlightId: null,
+
             createNoteForHighlight: function(highlightId, preview) {
                 const highlight = document.querySelector('[data-highlight-id=\"' + highlightId + '\"]');
-                if (!highlight || !this.marginColumn) return;
+                if (!highlight || !this.marginRight) return;
 
                 this.removeNote(highlightId);
 
@@ -877,31 +1010,56 @@ struct WebViewRepresentable: NSViewRepresentable {
                 note.className = 'crux-margin-note';
                 note.dataset.highlightId = highlightId;
                 note.dataset.idealTop = top;
+                note.dataset.side = 'right';
                 note.style.top = top + 'px';
 
                 note.innerHTML = '<div class=\"preview\">' + this.escapeHTML(preview) + '</div>' +
                     '<button class=\"crux-start-thread\">✨ Annotate</button>';
 
-                this.marginColumn.appendChild(note);
+                this.marginRight.appendChild(note);
                 this.notes.set(highlightId, note);
 
                 requestAnimationFrame(() => this.resolveCollisions());
             },
 
             updateNotes: function(notesData) {
+                // Ensure margins are initialized
+                if (!this.marginRight || !this.marginLeft) {
+                    this.marginLeft = document.querySelector('.crux-margin-left');
+                    this.marginRight = document.querySelector('.crux-margin-right');
+                }
+                if (!this.marginRight) return;
+
+                // Track pending highlight ID for keyboard shortcuts
+                this.pendingHighlightId = null;
+
+                // Remove notes that are no longer in the data (e.g., old pending selection)
+                const newIds = new Set(notesData.map(d => d.highlightId));
+                for (const [highlightId, note] of this.notes) {
+                    if (!newIds.has(highlightId)) {
+                        this.removeNote(highlightId);
+                    }
+                }
+
                 for (const data of notesData) {
+                    // Track uncommitted selection for keyboard shortcuts
+                    if (!data.isCommitted) {
+                        this.pendingHighlightId = data.highlightId;
+                    }
+
                     let note = this.notes.get(data.highlightId);
 
                     if (!note) {
                         const highlight = document.querySelector('[data-highlight-id=\"' + data.highlightId + '\"]');
-                        if (!highlight || !this.marginColumn) continue;
+                        if (!highlight) continue;
 
                         note = document.createElement('div');
                         note.className = 'crux-margin-note';
                         note.dataset.highlightId = data.highlightId;
                         note.dataset.idealTop = this.getDocumentOffset(highlight);
+                        note.dataset.side = 'right';
                         note.style.top = note.dataset.idealTop + 'px';
-                        this.marginColumn.appendChild(note);
+                        this.marginRight.appendChild(note);
                         this.notes.set(data.highlightId, note);
                     }
 
@@ -923,7 +1081,14 @@ struct WebViewRepresentable: NSViewRepresentable {
                         '<input type=\"text\" placeholder=\"Follow up...\" />' +
                         '<button class=\"crux-send-followup\">↑</button>' +
                         '</div>';
+                } else if (!data.isCommitted) {
+                    // Uncommitted selection - show both buttons
+                    html += '<div class=\"crux-selection-actions\">' +
+                        '<button class=\"crux-commit-highlight\">Highlight</button>' +
+                        '<button class=\"crux-start-thread\">✨ Annotate</button>' +
+                        '</div>';
                 } else {
+                    // Committed but no thread
                     html += '<button class=\"crux-start-thread\">✨ Annotate</button>';
                 }
 
@@ -956,7 +1121,12 @@ struct WebViewRepresentable: NSViewRepresentable {
             },
 
             resolveCollisions: function() {
-                if (!this.marginColumn) return;
+                // Ensure margins are initialized
+                if (!this.marginRight || !this.marginLeft) {
+                    this.marginLeft = document.querySelector('.crux-margin-left');
+                    this.marginRight = document.querySelector('.crux-margin-right');
+                }
+                if (!this.marginRight || !this.marginLeft) return;
 
                 const notesList = Array.from(this.notes.values())
                     .map(el => ({
@@ -967,12 +1137,33 @@ struct WebViewRepresentable: NSViewRepresentable {
                     .sort((a, b) => a.idealTop - b.idealTop);
 
                 const GAP = 8;
-                let lastBottom = 0;
+                const OVERLAP_THRESHOLD = 40; // Move to left if would be pushed down more than this
+                let rightBottom = 0;
+                let leftBottom = 0;
 
                 for (const note of notesList) {
-                    const resolvedTop = Math.max(note.idealTop, lastBottom);
-                    note.el.style.top = resolvedTop + 'px';
-                    lastBottom = resolvedTop + note.height + GAP;
+                    const wouldBeOnRight = Math.max(note.idealTop, rightBottom);
+                    const pushAmount = wouldBeOnRight - note.idealTop;
+
+                    // If note would be pushed down significantly, try left side
+                    if (pushAmount > OVERLAP_THRESHOLD && note.idealTop >= leftBottom) {
+                        // Move to left side
+                        if (note.el.dataset.side !== 'left') {
+                            note.el.dataset.side = 'left';
+                            this.marginLeft.appendChild(note.el);
+                        }
+                        const resolvedTop = Math.max(note.idealTop, leftBottom);
+                        note.el.style.top = resolvedTop + 'px';
+                        leftBottom = resolvedTop + note.height + GAP;
+                    } else {
+                        // Keep on right side
+                        if (note.el.dataset.side !== 'right') {
+                            note.el.dataset.side = 'right';
+                            this.marginRight.appendChild(note.el);
+                        }
+                        note.el.style.top = wouldBeOnRight + 'px';
+                        rightBottom = wouldBeOnRight + note.height + GAP;
+                    }
                 }
             },
 
@@ -1032,12 +1223,12 @@ struct WebViewRepresentable: NSViewRepresentable {
                 }
                 .crux-reader-wrapper {
                     display: flex;
-                    max-width: 1100px;
+                    max-width: 1400px;
                     margin: 0 auto;
+                    justify-content: center;
                 }
                 .crux-content {
-                    flex: 1;
-                    max-width: 680px;
+                    flex: 0 1 680px;
                     padding: 48px 56px;
                     font-family: var(--crux-font-body);
                     font-size: 18px;
@@ -1048,9 +1239,17 @@ struct WebViewRepresentable: NSViewRepresentable {
                     font-feature-settings: "kern" 1, "liga" 1;
                 }
                 .crux-margin {
-                    flex: 0 0 300px;
+                    flex: 0 0 280px;
                     position: relative;
-                    padding: 48px 16px 48px 0;
+                    padding: 48px 12px;
+                }
+                .crux-margin-left {
+                    padding-left: 12px;
+                    padding-right: 0;
+                }
+                .crux-margin-right {
+                    padding-left: 0;
+                    padding-right: 12px;
                 }
 
                 /* Paragraphs */
@@ -1155,8 +1354,7 @@ struct WebViewRepresentable: NSViewRepresentable {
                 /* Margin notes */
                 .crux-margin-note {
                     position: absolute;
-                    right: 16px;
-                    width: 268px;
+                    width: 252px;
                     padding: 12px;
                     background: var(--crux-rule);
                     border-radius: 6px;
@@ -1164,6 +1362,12 @@ struct WebViewRepresentable: NSViewRepresentable {
                     font-size: 13px;
                     line-height: 1.5;
                     color: var(--crux-text);
+                }
+                .crux-margin-right .crux-margin-note {
+                    right: 12px;
+                }
+                .crux-margin-left .crux-margin-note {
+                    left: 12px;
                 }
                 .crux-margin-note .note-header {
                     display: flex;
@@ -1217,7 +1421,11 @@ struct WebViewRepresentable: NSViewRepresentable {
                     padding: 1px 4px;
                     border-radius: 3px;
                 }
-                .crux-start-thread, .crux-send-followup {
+                .crux-selection-actions {
+                    display: flex;
+                    gap: 6px;
+                }
+                .crux-commit-highlight, .crux-start-thread, .crux-send-followup {
                     appearance: none;
                     border: 1px solid var(--crux-rule);
                     background: var(--crux-bg);
@@ -1228,7 +1436,7 @@ struct WebViewRepresentable: NSViewRepresentable {
                     color: var(--crux-text);
                     cursor: pointer;
                 }
-                .crux-start-thread:hover, .crux-send-followup:hover {
+                .crux-commit-highlight:hover, .crux-start-thread:hover, .crux-send-followup:hover {
                     background: var(--crux-rule);
                 }
                 .crux-followup-input { display: flex; gap: 4px; margin-top: 10px; }
@@ -1263,10 +1471,11 @@ struct WebViewRepresentable: NSViewRepresentable {
         </head>
         <body>
             <div class="crux-reader-wrapper">
+                <div class="crux-margin crux-margin-left"></div>
                 <div class="crux-content">
                     \(html)
                 </div>
-                <div class="crux-margin"></div>
+                <div class="crux-margin crux-margin-right"></div>
             </div>
         </body>
         </html>
@@ -1319,10 +1528,16 @@ struct WebViewRepresentable: UIViewRepresentable {
             // Also update pendingHighlights in case the page is still loading
             context.coordinator.pendingHighlights = highlights
             context.coordinator.pendingMarginNotes = marginNotes
-            context.coordinator.applyHighlights(highlights, to: webView)
+            let currentMarginNotes = marginNotes
+            context.coordinator.applyHighlights(highlights, to: webView) {
+                // Update margin notes after highlights are applied
+                context.coordinator.updateMarginNotes(currentMarginNotes)
+                context.coordinator.lastMarginNotes = currentMarginNotes
+            }
+            return
         }
 
-        // Update margin notes if they changed
+        // Update margin notes if they changed (only if highlights didn't change)
         if context.coordinator.lastMarginNotes != marginNotes {
             context.coordinator.updateMarginNotes(marginNotes)
             context.coordinator.lastMarginNotes = marginNotes
@@ -1360,17 +1575,13 @@ struct WebViewRepresentable: UIViewRepresentable {
 
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
             // Apply highlights and margin notes after page loads
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
-                guard let self = self else { return }
-                self.applyHighlights(self.pendingHighlights, to: webView)
-                // Apply pending margin notes after highlights
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                    self.updateMarginNotes(self.pendingMarginNotes)
-                }
+            applyHighlights(pendingHighlights, to: webView) { [weak self] in
+                // Apply pending margin notes after highlights are done
+                self?.updateMarginNotes(self?.pendingMarginNotes ?? [])
             }
         }
 
-        func applyHighlights(_ highlights: [Highlight], to webView: WKWebView) {
+        func applyHighlights(_ highlights: [Highlight], to webView: WKWebView, completion: (() -> Void)? = nil) {
             let highlightsWithCFI = highlights.compactMap { h -> [String: Any]? in
                 guard let cfi = h.cfiRange else { return nil }
                 return [
@@ -1384,12 +1595,16 @@ struct WebViewRepresentable: UIViewRepresentable {
 
             guard !highlightsWithCFI.isEmpty,
                   let jsonData = try? JSONSerialization.data(withJSONObject: highlightsWithCFI),
-                  let jsonString = String(data: jsonData, encoding: .utf8) else { return }
+                  let jsonString = String(data: jsonData, encoding: .utf8) else {
+                completion?()
+                return
+            }
 
             webView.evaluateJavaScript("CruxHighlighter.applyHighlights(\(jsonString));") { [weak self] _, error in
                 if error == nil {
                     self?.highlightsApplied = highlightsWithCFI.compactMap { UUID(uuidString: $0["id"] as? String ?? "") }
                 }
+                completion?()
             }
         }
 
@@ -1426,6 +1641,8 @@ struct WebViewRepresentable: UIViewRepresentable {
 
                 let noteAction: MarginNoteAction
                 switch action {
+                case "commitHighlight":
+                    noteAction = .commitHighlight(highlightId: highlightId)
                 case "startThread":
                     noteAction = .startThread(highlightId: highlightId)
                 case "sendFollowUp":
@@ -1648,8 +1865,19 @@ struct WebViewRepresentable: UIViewRepresentable {
             },
 
             applyHighlights: function(highlightsArray) {
+                // Remove highlights that are no longer in the array (e.g., old pending selection)
+                const newIds = new Set(highlightsArray.map(h => h.id));
+                for (const [id, elements] of this.highlights) {
+                    if (!newIds.has(id)) {
+                        this.removeHighlight(id);
+                    }
+                }
+
+                // Apply new highlights
                 for (const h of highlightsArray) {
-                    this.applyHighlight(h);
+                    if (!this.highlights.has(h.id)) {
+                        this.applyHighlight(h);
+                    }
                 }
             },
 
@@ -1751,10 +1979,12 @@ struct WebViewRepresentable: UIViewRepresentable {
         """
         const CruxMarginNotes = {
             notes: new Map(),
-            marginColumn: null,
+            marginLeft: null,
+            marginRight: null,
 
             init: function() {
-                this.marginColumn = document.querySelector('.crux-margin');
+                this.marginLeft = document.querySelector('.crux-margin-left');
+                this.marginRight = document.querySelector('.crux-margin-right');
                 this.setupEventDelegation();
             },
 
@@ -1771,6 +2001,16 @@ struct WebViewRepresentable: UIViewRepresentable {
                         // Immediately remove from DOM for responsive feel
                         CruxHighlighter.removeHighlight(highlightId);
                         this.removeNote(highlightId);
+                        return;
+                    }
+
+                    const commitBtn = e.target.closest('.crux-commit-highlight');
+                    if (commitBtn) {
+                        const note = commitBtn.closest('.crux-margin-note');
+                        window.webkit.messageHandlers.marginNoteAction.postMessage({
+                            action: 'commitHighlight',
+                            highlightId: note.dataset.highlightId
+                        });
                         return;
                     }
 
@@ -1812,9 +2052,29 @@ struct WebViewRepresentable: UIViewRepresentable {
                             });
                             input.value = '';
                         }
+                        return;
+                    }
+
+                    // Keyboard shortcuts for pending selection
+                    if (e.metaKey && this.pendingHighlightId) {
+                        if (e.key === 'h' || e.key === 'H') {
+                            e.preventDefault();
+                            window.webkit.messageHandlers.marginNoteAction.postMessage({
+                                action: 'commitHighlight',
+                                highlightId: this.pendingHighlightId
+                            });
+                        } else if (e.key === 'a' || e.key === 'A') {
+                            e.preventDefault();
+                            window.webkit.messageHandlers.marginNoteAction.postMessage({
+                                action: 'startThread',
+                                highlightId: this.pendingHighlightId
+                            });
+                        }
                     }
                 });
             },
+
+            pendingHighlightId: null,
 
             createNoteForHighlight: function(highlightId, preview) {
                 const highlight = document.querySelector('[data-highlight-id="' + highlightId + '"]');
@@ -1863,18 +2123,26 @@ struct WebViewRepresentable: UIViewRepresentable {
             },
 
             buildNoteContent: function(data) {
-                let html = '<div class="preview">' + this.escapeHTML(data.previewText) + '</div>';
+                let html = '<div class=\"note-header\"><div class=\"preview\">' + this.escapeHTML(data.previewText) + '</div>';
+                html += '<button class=\"crux-delete-highlight\" title=\"Delete\">×</button></div>';
 
                 if (data.isLoading) {
-                    html += '<div class="crux-loading">' + (data.hasThread ? 'Thinking...' : 'Analyzing...') + '</div>';
+                    html += '<div class=\"crux-loading\">' + (data.hasThread ? 'Thinking...' : 'Analyzing...') + '</div>';
                 } else if (data.hasThread && data.threadContent) {
-                    html += '<div class="thread-content">' + data.threadContent + '</div>';
-                    html += '<div class="crux-followup-input">' +
-                        '<input type="text" placeholder="Follow up..." />' +
-                        '<button class="crux-send-followup">↑</button>' +
+                    html += '<div class=\"thread-content\">' + data.threadContent + '</div>';
+                    html += '<div class=\"crux-followup-input\">' +
+                        '<input type=\"text\" placeholder=\"Follow up...\" />' +
+                        '<button class=\"crux-send-followup\">↑</button>' +
+                        '</div>';
+                } else if (!data.isCommitted) {
+                    // Uncommitted selection - show both buttons
+                    html += '<div class=\"crux-selection-actions\">' +
+                        '<button class=\"crux-commit-highlight\">Highlight</button>' +
+                        '<button class=\"crux-start-thread\">✨ Annotate</button>' +
                         '</div>';
                 } else {
-                    html += '<button class="crux-start-thread">✨ Annotate</button>';
+                    // Committed but no thread
+                    html += '<button class=\"crux-start-thread\">✨ Annotate</button>';
                 }
 
                 return html;
@@ -1906,7 +2174,12 @@ struct WebViewRepresentable: UIViewRepresentable {
             },
 
             resolveCollisions: function() {
-                if (!this.marginColumn) return;
+                // Ensure margins are initialized
+                if (!this.marginRight || !this.marginLeft) {
+                    this.marginLeft = document.querySelector('.crux-margin-left');
+                    this.marginRight = document.querySelector('.crux-margin-right');
+                }
+                if (!this.marginRight || !this.marginLeft) return;
 
                 const notesList = Array.from(this.notes.values())
                     .map(el => ({
@@ -1917,12 +2190,33 @@ struct WebViewRepresentable: UIViewRepresentable {
                     .sort((a, b) => a.idealTop - b.idealTop);
 
                 const GAP = 8;
-                let lastBottom = 0;
+                const OVERLAP_THRESHOLD = 40; // Move to left if would be pushed down more than this
+                let rightBottom = 0;
+                let leftBottom = 0;
 
                 for (const note of notesList) {
-                    const resolvedTop = Math.max(note.idealTop, lastBottom);
-                    note.el.style.top = resolvedTop + 'px';
-                    lastBottom = resolvedTop + note.height + GAP;
+                    const wouldBeOnRight = Math.max(note.idealTop, rightBottom);
+                    const pushAmount = wouldBeOnRight - note.idealTop;
+
+                    // If note would be pushed down significantly, try left side
+                    if (pushAmount > OVERLAP_THRESHOLD && note.idealTop >= leftBottom) {
+                        // Move to left side
+                        if (note.el.dataset.side !== 'left') {
+                            note.el.dataset.side = 'left';
+                            this.marginLeft.appendChild(note.el);
+                        }
+                        const resolvedTop = Math.max(note.idealTop, leftBottom);
+                        note.el.style.top = resolvedTop + 'px';
+                        leftBottom = resolvedTop + note.height + GAP;
+                    } else {
+                        // Keep on right side
+                        if (note.el.dataset.side !== 'right') {
+                            note.el.dataset.side = 'right';
+                            this.marginRight.appendChild(note.el);
+                        }
+                        note.el.style.top = wouldBeOnRight + 'px';
+                        rightBottom = wouldBeOnRight + note.height + GAP;
+                    }
                 }
             },
 
@@ -2115,19 +2409,42 @@ struct WebViewRepresentable: UIViewRepresentable {
                     line-height: 1.5;
                     color: var(--crux-text);
                 }
+                .crux-margin-note .note-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: flex-start;
+                    gap: 8px;
+                    margin-bottom: 10px;
+                }
                 .crux-margin-note .preview {
+                    flex: 1;
                     font-family: var(--crux-font-body);
                     font-style: italic;
                     color: var(--crux-text-muted);
                     font-size: 12px;
-                    margin-bottom: 8px;
                     display: -webkit-box;
                     -webkit-line-clamp: 2;
                     -webkit-box-orient: vertical;
                     overflow: hidden;
                 }
+                .crux-delete-highlight {
+                    appearance: none;
+                    border: none;
+                    background: transparent;
+                    color: var(--crux-text-muted);
+                    font-size: 16px;
+                    line-height: 1;
+                    padding: 0 4px;
+                    cursor: pointer;
+                    opacity: 0.5;
+                    transition: opacity 0.15s ease;
+                }
+                .crux-delete-highlight:hover {
+                    opacity: 1;
+                    color: var(--crux-accent);
+                }
                 .crux-margin-note .thread-content { margin-bottom: 8px; }
-                .crux-margin-note .thread-message { margin-bottom: 8px; }
+                .crux-margin-note .thread-message { margin-bottom: 10px; }
                 .crux-margin-note .thread-message.user {
                     font-style: italic;
                     color: var(--crux-text-muted);
@@ -2144,7 +2461,11 @@ struct WebViewRepresentable: UIViewRepresentable {
                     padding: 1px 4px;
                     border-radius: 3px;
                 }
-                .crux-start-thread, .crux-send-followup {
+                .crux-selection-actions {
+                    display: flex;
+                    gap: 6px;
+                }
+                .crux-commit-highlight, .crux-start-thread, .crux-send-followup {
                     appearance: none;
                     border: 1px solid var(--crux-rule);
                     background: var(--crux-bg);
@@ -2187,10 +2508,11 @@ struct WebViewRepresentable: UIViewRepresentable {
         </head>
         <body>
             <div class="crux-reader-wrapper">
+                <div class="crux-margin crux-margin-left"></div>
                 <div class="crux-content">
                     \(html)
                 </div>
-                <div class="crux-margin"></div>
+                <div class="crux-margin crux-margin-right"></div>
             </div>
         </body>
         </html>

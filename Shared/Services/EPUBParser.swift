@@ -390,6 +390,13 @@ actor EPUBParser {
                 .trimmingCharacters(in: .whitespacesAndNewlines)
         }
 
+        // Extract navPoint id attribute
+        var navPointId = "ncx-\(order)"
+        if let idAttr = content.range(of: "id=\"", options: .caseInsensitive),
+           let idEnd = content.range(of: "\"", range: idAttr.upperBound..<content.endIndex) {
+            navPointId = String(content[idAttr.upperBound..<idEnd.lowerBound])
+        }
+
         // Extract content src
         var href = ""
         if let contentTag = content.range(of: "<content", options: .caseInsensitive),
@@ -405,7 +412,7 @@ actor EPUBParser {
             let contentString = (try? String(contentsOf: contentURL, encoding: .utf8)) ?? ""
 
             chapters.append(Chapter(
-                id: "ncx-\(order)",
+                id: navPointId,
                 title: title,
                 href: href,
                 content: contentString,

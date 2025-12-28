@@ -27,6 +27,7 @@ struct SelectionData: Equatable {
 
 /// Action from a margin note in the WebView
 enum MarginNoteAction {
+    case commitHighlight(highlightId: UUID)
     case startThread(highlightId: UUID)
     case sendFollowUp(highlightId: UUID, message: String)
     case deleteHighlight(highlightId: UUID)
@@ -36,6 +37,7 @@ enum MarginNoteAction {
 struct MarginNoteData: Codable, Equatable {
     let highlightId: String
     let previewText: String
+    let isCommitted: Bool  // Whether the highlight is saved (shows Highlight button if false)
     let hasThread: Bool
     let threadContent: String?  // HTML for thread messages
     let isLoading: Bool
