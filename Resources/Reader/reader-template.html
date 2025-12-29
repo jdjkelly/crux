@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html data-platform="{{PLATFORM}}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="reader.css">
+</head>
+<body>
+    <div class="crux-reader-wrapper">
+        <div class="crux-margin crux-margin-left"></div>
+        <div class="crux-content">
+            {{CONTENT}}
+        </div>
+        <div class="crux-margin crux-margin-right"></div>
+        <div class="crux-floating-input">
+            <div class="crux-floating-input-context"></div>
+            <input type="text" placeholder="Continue the conversation..." />
+            <div class="crux-floating-input-hint">↵ to send · esc to close</div>
+        </div>
+    </div>
+    <script src="cfi.js"></script>
+    <script src="highlighter.js"></script>
+    <script src="selection-{{PLATFORM}}.js"></script>
+    <script src="margin-notes.js"></script>
+</body>
+</html>

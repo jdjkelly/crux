@@ -22,6 +22,8 @@ targets:
     platform: [iOS, macOS]
     sources:
       - path: Shared
+      - path: Resources/Reader
+        buildPhase: resources
       - path: iOS
         excludes:
           - "**/*"
