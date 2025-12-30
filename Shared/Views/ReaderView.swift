@@ -17,6 +17,11 @@ struct ReaderView: View {
     @State private var loadingHighlightId: UUID? = nil
     @State private var pendingSelection: SelectionData? = nil
     @State private var pendingHighlightId: UUID? = nil
+    @State private var searchState = SearchState()
+    @State private var webViewCoordinator: WebViewCoordinator? = nil
+    @State private var pendingFragment: String? = nil
+    @State private var previousFilePath: String? = nil
+    @State private var isNavigatingProgrammatically = false
 
     private var storedBook: StoredBook? {
         storedBooks.first { $0.id == bookId }
@@ -29,7 +34,13 @@ struct ReaderView: View {
 
     var currentChapterHighlights: [Highlight] {
         guard let chapter = currentChapter else { return [] }
-        return annotations.highlights.filter { $0.chapterId == chapter.id }
+        let currentFilePath = chapter.filePath
+
+        // Find all chapters that share this file path (including parent/subchapters)
+        let chaptersForFile = book.chapters.filter { $0.filePath == currentFilePath }
+        let chapterIds = Set(chaptersForFile.map { $0.id })
+
+        return annotations.highlights.filter { chapterIds.contains($0.chapterId) }
     }
 
     /// Highlights to display in WebView (includes pending uncommitted selection)
@@ -128,6 +139,40 @@ struct ReaderView: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            // Search bar at top when active
+            if searchState.isSearchActive {
+                InlineSearchBar(
+                    searchState: searchState,
+                    onSearch: { query in
+                        if searchState.scope == .chapter {
+                            performInChapterSearch(query)
+                        } else {
+                            performBookSearch(query)
+                        }
+                    },
+                    onNext: { navigateSearchResult(forward: true) },
+                    onPrevious: { navigateSearchResult(forward: false) },
+                    onClose: { closeSearch() },
+                    onScopeChange: { scope in
+                        handleScopeChange(scope)
+                    }
+                )
+
+                // Book search results dropdown
+                if searchState.scope == .book && !searchState.bookMatches.isEmpty {
+                    BookSearchResultsView(
+                        matches: searchState.bookMatches,
+                        onSelectMatch: { match in
+                            navigateToChapter(match.chapterIndex)
+                            // Switch to chapter scope to highlight in context
+                            searchState.scope = .chapter
+                            // Search will be re-run by onChange handler
+                        }
+                    )
+                    .frame(maxHeight: 200)
+                }
+            }
+
             if let chapter = currentChapter {
                 EPUBWebView(
                     chapter: chapter,
@@ -141,6 +186,17 @@ struct ReaderView: View {
                     },
                     onMarginNoteAction: { action in
                         handleMarginNoteAction(action)
+                    },
+                    onSearchResults: { matchCount, currentIndex in
+                        searchState.inChapterMatchCount = matchCount
+                        searchState.inChapterCurrentIndex = max(0, currentIndex)
+                    },
+                    onContentLoaded: {
+                        scrollToFragmentOrTop()
+                        initializeViewportTracking()
+                    },
+                    onVisibleSection: { chapterIndex in
+                        handleVisibleSectionChange(chapterIndex)
                     }
                 )
             } else {
@@ -200,6 +256,21 @@ struct ReaderView: View {
         .task {
             await loadState()
         }
+        .onChange(of: currentChapterIndex) { _, _ in
+            // Scroll to position after chapter change
+            // Use delay to let content load/update first
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                scrollToFragmentOrTop()
+            }
+
+            // Re-run search in new chapter if search is active
+            if searchState.isSearchActive && searchState.scope == .chapter && !searchState.query.isEmpty {
+                // Small delay to let the new chapter content load
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    performInChapterSearch(searchState.query)
+                }
+            }
+        }
         #if os(macOS)
         .onKeyPress(.leftArrow) {
             if currentChapterIndex > 0 {
@@ -211,6 +282,21 @@ struct ReaderView: View {
         .onKeyPress(.rightArrow) {
             if currentChapterIndex < book.chapters.count - 1 {
                 navigateToChapter(currentChapterIndex + 1)
+                return .handled
+            }
+            return .ignored
+        }
+        .onKeyPress(characters: .init(charactersIn: "fF")) { press in
+            if press.modifiers.contains(.command) {
+                searchState.isSearchActive = true
+                return .handled
+            }
+            return .ignored
+        }
+        .onKeyPress(.escape) {
+            if pendingSelection != nil {
+                clearPendingSelection()
+                evaluateJavaScript("window.getSelection().removeAllRanges();")
                 return .handled
             }
             return .ignored
@@ -354,18 +440,101 @@ struct ReaderView: View {
     private func navigateToChapter(_ index: Int) {
         guard index >= 0 && index < book.chapters.count else { return }
         clearPendingSelection()  // Discard uncommitted selection on chapter change
+
+        // Set navigation guard to prevent scroll tracking feedback loop
+        isNavigatingProgrammatically = true
+        evaluateJavaScript("CruxViewportTracker.beginProgrammaticNavigation();")
+
+        // Capture fragment and file path for scroll handling
+        let newFilePath = book.chapters[index].filePath
+        let sameFile = previousFilePath == newFilePath
+        pendingFragment = book.chapters[index].fragment
+
+        // If navigating within same file to a chapter without fragment, scroll to top
+        if sameFile && pendingFragment == nil {
+            pendingFragment = "__TOP__"  // Sentinel to trigger scroll to top
+        }
+        previousFilePath = newFilePath
+
+        // Clear search state on chapter change (search again in new chapter)
+        if searchState.isSearchActive && searchState.scope == .chapter {
+            searchState.inChapterMatchCount = 0
+            searchState.inChapterCurrentIndex = 0
+        }
+
         currentChapterIndex = index
         saveProgress()
+
+        // End programmatic navigation after scroll settles
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            isNavigatingProgrammatically = false
+            evaluateJavaScript("CruxViewportTracker.endProgrammaticNavigation();")
+        }
     }
 
     private func saveProgress() {
         storedBook?.updateProgress(chapter: currentChapterIndex, total: book.chapters.count)
     }
 
+    private func scrollToFragmentOrTop() {
+        guard let fragment = pendingFragment else { return }
+        pendingFragment = nil
+
+        if fragment == "__TOP__" {
+            // Scroll to top of chapter
+            evaluateJavaScript("window.scrollTo(0, 0);")
+        } else {
+            // Scroll to anchor
+            let escaped = fragment.replacingOccurrences(of: "'", with: "\\'")
+            evaluateJavaScript("CruxHighlighter.scrollToAnchor('\(escaped)');")
+        }
+    }
+
+    private func handleVisibleSectionChange(_ chapterIndex: Int) {
+        // Guard against feedback loops during programmatic navigation
+        guard !isNavigatingProgrammatically else { return }
+        // No update needed if index hasn't changed
+        guard chapterIndex != currentChapterIndex else { return }
+        // Validate index
+        guard chapterIndex >= 0 && chapterIndex < book.chapters.count else { return }
+
+        // Update current chapter based on scroll position
+        currentChapterIndex = chapterIndex
+        previousFilePath = book.chapters[chapterIndex].filePath
+        saveProgress()
+    }
+
+    private func initializeViewportTracking() {
+        guard let chapter = currentChapter else { return }
+        // Build anchor list for current file and initialize viewport tracker
+        var anchors: [[String: Any]] = []
+
+        for (index, ch) in book.chapters.enumerated() {
+            guard ch.filePath == chapter.filePath else { continue }
+
+            if let fragment = ch.fragment {
+                anchors.append(["id": fragment, "chapterIndex": index, "isFileStart": false])
+            } else {
+                anchors.append(["id": "__crux_doc_start__", "chapterIndex": index, "isFileStart": true])
+            }
+        }
+
+        guard !anchors.isEmpty,
+              let jsonData = try? JSONSerialization.data(withJSONObject: anchors),
+              let jsonString = String(data: jsonData, encoding: .utf8) else { return }
+
+        evaluateJavaScript("CruxViewportTracker.init(\(jsonString));")
+    }
+
     private func loadState() async {
         // Load saved chapter position
         if let stored = storedBook {
             currentChapterIndex = min(stored.currentChapterIndex, book.chapters.count - 1)
+        }
+
+        // Initialize file path tracking
+        if currentChapterIndex < book.chapters.count {
+            previousFilePath = book.chapters[currentChapterIndex].filePath
         }
 
         // Load annotations
@@ -375,6 +544,114 @@ struct ReaderView: View {
             annotations = BookAnnotations(bookId: bookId)
         }
     }
+
+    // MARK: - Search
+
+    private func performInChapterSearch(_ query: String) {
+        guard searchState.scope == .chapter else { return }
+        let escaped = query.replacingOccurrences(of: "\\", with: "\\\\")
+                          .replacingOccurrences(of: "'", with: "\\'")
+        let js = "CruxSearch.search('\(escaped)');"
+        evaluateJavaScript(js)
+    }
+
+    private func navigateSearchResult(forward: Bool) {
+        if searchState.scope == .chapter {
+            let js = forward ? "CruxSearch.nextMatch();" : "CruxSearch.previousMatch();"
+            evaluateJavaScript(js)
+        }
+    }
+
+    private func closeSearch() {
+        evaluateJavaScript("CruxSearch.clearHighlights();")
+        searchState.isSearchActive = false
+        searchState.reset()
+    }
+
+    private func handleScopeChange(_ scope: SearchScope) {
+        // Clear in-chapter highlights when switching scopes
+        if scope == .book {
+            evaluateJavaScript("CruxSearch.clearHighlights();")
+            searchState.inChapterMatchCount = 0
+            searchState.inChapterCurrentIndex = 0
+            performBookSearch(searchState.query)
+        } else {
+            searchState.bookMatches = []
+            // Re-run in-chapter search
+            performInChapterSearch(searchState.query)
+        }
+    }
+
+    private func performBookSearch(_ query: String) {
+        guard !query.isEmpty else {
+            searchState.bookMatches = []
+            return
+        }
+
+        var matches: [SearchMatch] = []
+
+        for (index, chapter) in book.chapters.enumerated() {
+            let plainText = HTMLTextExtractor.extractText(from: chapter.content)
+            let chapterMatches = HTMLTextExtractor.findMatches(in: plainText, query: query)
+
+            for (matchIndex, match) in chapterMatches.enumerated() {
+                matches.append(SearchMatch(
+                    text: match.snippet,
+                    chapterId: chapter.id,
+                    chapterTitle: chapter.title,
+                    chapterIndex: index,
+                    matchIndex: matchIndex
+                ))
+            }
+        }
+
+        searchState.bookMatches = matches
+    }
+
+    private func evaluateJavaScript(_ js: String) {
+        // Access the webView through the view hierarchy
+        // This is a workaround since we don't have direct access to the coordinator
+        #if os(macOS)
+        if let window = NSApplication.shared.keyWindow,
+           let webView = findWebView(in: window.contentView) {
+            webView.evaluateJavaScript(js, completionHandler: nil)
+        }
+        #else
+        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+           let window = windowScene.windows.first,
+           let webView = findWebView(in: window) {
+            webView.evaluateJavaScript(js, completionHandler: nil)
+        }
+        #endif
+    }
+
+    #if os(macOS)
+    private func findWebView(in view: NSView?) -> WKWebView? {
+        guard let view = view else { return nil }
+        if let webView = view as? WKWebView {
+            return webView
+        }
+        for subview in view.subviews {
+            if let found = findWebView(in: subview) {
+                return found
+            }
+        }
+        return nil
+    }
+    #else
+    private func findWebView(in view: UIView?) -> WKWebView? {
+        guard let view = view else { return nil }
+        if let webView = view as? WKWebView {
+            return webView
+        }
+        for subview in view.subviews {
+            if let found = findWebView(in: subview) {
+                return found
+            }
+        }
+        return nil
+    }
+    #endif
 }
 
 // WebView for rendering EPUB HTML content
@@ -385,6 +662,9 @@ struct EPUBWebView: View {
     let onTextSelected: (SelectionData) -> Void
     let onHighlightTapped: (UUID) -> Void
     var onMarginNoteAction: ((MarginNoteAction) -> Void)? = nil
+    var onSearchResults: ((Int, Int) -> Void)? = nil
+    var onContentLoaded: (() -> Void)? = nil
+    var onVisibleSection: ((Int) -> Void)? = nil
 
     var body: some View {
         EPUBWebViewRepresentable(
@@ -393,7 +673,10 @@ struct EPUBWebView: View {
             marginNotes: marginNotes,
             onTextSelected: onTextSelected,
             onHighlightTapped: onHighlightTapped,
-            onMarginNoteAction: onMarginNoteAction
+            onMarginNoteAction: onMarginNoteAction,
+            onSearchResults: onSearchResults,
+            onContentLoaded: onContentLoaded,
+            onVisibleSection: onVisibleSection
         )
     }
 }

@@ -7,5 +7,8 @@ document.addEventListener('mouseup', function(e) {
     const cfiData = CruxCFI.getSelectionCFI();
     if (cfiData && cfiData.text.length > 0) {
         window.webkit.messageHandlers.textSelection.postMessage(cfiData);
+        // Clear the browser's native selection after capturing it
+        // This prevents the native selection from visually interfering with our highlight spans
+        window.getSelection().removeAllRanges();
     }
 });

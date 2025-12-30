@@ -18,12 +18,18 @@ struct EPUBWebViewRepresentable: PlatformViewRepresentable {
     let onTextSelected: (SelectionData) -> Void
     let onHighlightTapped: (UUID) -> Void
     let onMarginNoteAction: ((MarginNoteAction) -> Void)?
+    let onSearchResults: ((Int, Int) -> Void)?
+    let onContentLoaded: (() -> Void)?
+    let onVisibleSection: ((Int) -> Void)?
 
     func makeCoordinator() -> WebViewCoordinator {
         WebViewCoordinator(
             onTextSelected: onTextSelected,
             onHighlightTapped: onHighlightTapped,
-            onMarginNoteAction: onMarginNoteAction
+            onMarginNoteAction: onMarginNoteAction,
+            onSearchResults: onSearchResults,
+            onContentLoaded: onContentLoaded,
+            onVisibleSection: onVisibleSection
         )
     }
 
@@ -52,6 +58,8 @@ struct EPUBWebViewRepresentable: PlatformViewRepresentable {
         config.userContentController.add(context.coordinator, name: "textSelection")
         config.userContentController.add(context.coordinator, name: "highlightTapped")
         config.userContentController.add(context.coordinator, name: "marginNoteAction")
+        config.userContentController.add(context.coordinator, name: "searchResults")
+        config.userContentController.add(context.coordinator, name: "visibleSection")
 
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = context.coordinator
@@ -107,6 +115,9 @@ class WebViewCoordinator: NSObject, WKNavigationDelegate, WKScriptMessageHandler
     let onTextSelected: (SelectionData) -> Void
     let onHighlightTapped: (UUID) -> Void
     let onMarginNoteAction: ((MarginNoteAction) -> Void)?
+    let onSearchResults: ((Int, Int) -> Void)?
+    let onContentLoaded: (() -> Void)?
+    let onVisibleSection: ((Int) -> Void)?
 
     var lastLoadedHTML: String = ""
     var pendingHighlights: [Highlight] = []
@@ -118,16 +129,25 @@ class WebViewCoordinator: NSObject, WKNavigationDelegate, WKScriptMessageHandler
     init(
         onTextSelected: @escaping (SelectionData) -> Void,
         onHighlightTapped: @escaping (UUID) -> Void,
-        onMarginNoteAction: ((MarginNoteAction) -> Void)?
+        onMarginNoteAction: ((MarginNoteAction) -> Void)?,
+        onSearchResults: ((Int, Int) -> Void)?,
+        onContentLoaded: (() -> Void)?,
+        onVisibleSection: ((Int) -> Void)?
     ) {
         self.onTextSelected = onTextSelected
         self.onHighlightTapped = onHighlightTapped
         self.onMarginNoteAction = onMarginNoteAction
+        self.onSearchResults = onSearchResults
+        self.onContentLoaded = onContentLoaded
+        self.onVisibleSection = onVisibleSection
     }
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         applyHighlights(pendingHighlights, to: webView) { [weak self] in
             self?.updateMarginNotes(self?.pendingMarginNotes ?? [])
+            DispatchQueue.main.async {
+                self?.onContentLoaded?()
+            }
         }
     }
 
@@ -208,7 +228,39 @@ class WebViewCoordinator: NSObject, WKNavigationDelegate, WKScriptMessageHandler
             DispatchQueue.main.async {
                 self.onMarginNoteAction?(noteAction)
             }
+        } else if message.name == "searchResults", let body = message.body as? [String: Any] {
+            let matchCount = body["matchCount"] as? Int ?? 0
+            let currentIndex = body["currentIndex"] as? Int ?? -1
+            DispatchQueue.main.async {
+                self.onSearchResults?(matchCount, currentIndex)
+            }
+        } else if message.name == "visibleSection", let body = message.body as? [String: Any] {
+            if let chapterIndex = body["chapterIndex"] as? Int {
+                DispatchQueue.main.async {
+                    self.onVisibleSection?(chapterIndex)
+                }
+            }
         }
+    }
+
+    func initViewportTracking(chapters: [Chapter], currentFilePath: String) {
+        var anchors: [[String: Any]] = []
+
+        for (index, chapter) in chapters.enumerated() {
+            guard chapter.filePath == currentFilePath else { continue }
+
+            if let fragment = chapter.fragment {
+                anchors.append(["id": fragment, "chapterIndex": index, "isFileStart": false])
+            } else {
+                anchors.append(["id": "__crux_doc_start__", "chapterIndex": index, "isFileStart": true])
+            }
+        }
+
+        guard !anchors.isEmpty,
+              let jsonData = try? JSONSerialization.data(withJSONObject: anchors),
+              let jsonString = String(data: jsonData, encoding: .utf8) else { return }
+
+        webView?.evaluateJavaScript("CruxViewportTracker.init(\(jsonString));", completionHandler: nil)
     }
 
     func updateMarginNotes(_ notes: [MarginNoteData]) {

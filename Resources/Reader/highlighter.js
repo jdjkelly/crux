@@ -187,5 +187,14 @@ const CruxHighlighter = {
             top: Math.max(0, scrollTarget),
             behavior: 'smooth'
         });
+    },
+
+    scrollToAnchor: function(anchorId) {
+        const element = document.getElementById(anchorId);
+        if (element) {
+            element.scrollIntoView({ behavior: 'instant', block: 'start' });
+            return true;
+        }
+        return false;
     }
 };

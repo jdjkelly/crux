@@ -527,7 +527,7 @@ actor EPUBParser {
             result = result.replacingOccurrences(of: entity, with: replacement)
         }
 
-        // Handle numeric entities like &#8220;
+        // Handle decimal numeric entities like &#8220;
         let numericPattern = #"&#(\d+);"#
         if let regex = try? NSRegularExpression(pattern: numericPattern) {
             let matches = regex.matches(in: result, range: NSRange(result.startIndex..., in: result))
@@ -535,6 +535,20 @@ actor EPUBParser {
                 if let range = Range(match.range, in: result),
                    let numRange = Range(match.range(at: 1), in: result),
                    let codePoint = Int(result[numRange]),
+                   let scalar = Unicode.Scalar(codePoint) {
+                    result.replaceSubrange(range, with: String(Character(scalar)))
+                }
+            }
+        }
+
+        // Handle hexadecimal numeric entities like &#x201C;
+        let hexPattern = #"&#[xX]([0-9a-fA-F]+);"#
+        if let regex = try? NSRegularExpression(pattern: hexPattern) {
+            let matches = regex.matches(in: result, range: NSRange(result.startIndex..., in: result))
+            for match in matches.reversed() {
+                if let range = Range(match.range, in: result),
+                   let hexRange = Range(match.range(at: 1), in: result),
+                   let codePoint = Int(result[hexRange], radix: 16),
                    let scalar = Unicode.Scalar(codePoint) {
                     result.replaceSubrange(range, with: String(Character(scalar)))
                 }

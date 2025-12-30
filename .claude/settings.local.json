@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(unzip:*)",
+      "Bash(swift:*)",
+      "Bash(xcodebuild:*)",
+      "Bash(xcodegen generate:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
+    ]
+  }
+}

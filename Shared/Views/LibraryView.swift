@@ -9,14 +9,33 @@ struct LibraryMainView: View {
     let onAddBook: () -> Void
     let onDeleteBook: (StoredBook) -> Void
 
+    @State private var searchQuery = ""
+
+    private var filteredBooks: [StoredBook] {
+        guard !searchQuery.isEmpty else { return storedBooks }
+        let query = searchQuery.lowercased()
+        return storedBooks.filter { book in
+            book.title.lowercased().contains(query) ||
+            (book.author?.lowercased().contains(query) ?? false)
+        }
+    }
+
     var body: some View {
         NavigationStack {
-            Group {
+            VStack(spacing: 0) {
+                // Search bar
+                if !storedBooks.isEmpty {
+                    LibrarySearchBar(query: $searchQuery)
+                }
+
+                // Content
                 if storedBooks.isEmpty {
                     EmptyLibraryView(onAddBook: onAddBook)
+                } else if filteredBooks.isEmpty {
+                    ContentUnavailableView.search(text: searchQuery)
                 } else {
                     BookListView(
-                        books: storedBooks,
+                        books: filteredBooks,
                         onSelectBook: onSelectBook,
                         onDeleteBook: onDeleteBook
                     )
@@ -31,6 +50,36 @@ struct LibraryMainView: View {
                 }
             }
         }
+    }
+}
+
+struct LibrarySearchBar: View {
+    @Binding var query: String
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "magnifyingglass")
+                .foregroundStyle(.secondary)
+
+            TextField("Search library...", text: $query)
+                .textFieldStyle(.plain)
+
+            if !query.isEmpty {
+                Button {
+                    query = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(.quaternary)
+        .cornerRadius(8)
+        .padding(.horizontal, 24)
+        .padding(.vertical, 12)
     }
 }
 
