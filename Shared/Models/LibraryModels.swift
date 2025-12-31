@@ -13,11 +13,23 @@ final class StoredBook {
     var currentChapterIndex: Int
     var totalChapters: Int
     var isFinished: Bool
+    var scrollPosition: Double = 0  // 0.0-1.0 percentage within chapter
 
     // Cached metadata
     var language: String?
     var publisher: String?
     var bookDescription: String?
+    var publicationYear: Int?
+    var subjectsJSON: String?  // JSON-encoded [String] array
+
+    var subjects: [String] {
+        guard let json = subjectsJSON,
+              let data = json.data(using: .utf8),
+              let arr = try? JSONDecoder().decode([String].self, from: data) else {
+            return []
+        }
+        return arr
+    }
 
     init(
         id: UUID,
@@ -35,6 +47,7 @@ final class StoredBook {
         self.currentChapterIndex = currentChapterIndex
         self.totalChapters = totalChapters
         self.isFinished = false
+        self.scrollPosition = 0
     }
 
     var progress: Double {
@@ -46,10 +59,11 @@ final class StoredBook {
         lastOpenedAt = Date()
     }
 
-    func updateProgress(chapter: Int, total: Int) {
+    func updateProgress(chapter: Int, total: Int, scroll: Double = 0) {
         currentChapterIndex = chapter
         totalChapters = total
-        if chapter >= total - 1 {
+        scrollPosition = scroll
+        if chapter >= total - 1 && scroll > 0.9 {
             isFinished = true
         }
     }

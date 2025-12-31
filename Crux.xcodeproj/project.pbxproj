@@ -24,6 +24,7 @@
 		49F4BF4930B8379877C576A0 /* ViewportTrackingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80EA424767159B08E19A17E4 /* ViewportTrackingTests.swift */; };
 		4CF19FBF5BFBBE5776705DE0 /* viewport-tracker.js in Resources */ = {isa = PBXBuildFile; fileRef = 7873849D62CF0509D4A2A854 /* viewport-tracker.js */; };
 		50997DC49B821E6E07BE89F1 /* Chapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 933DCD1102EBB7AC50725553 /* Chapter.swift */; };
+		51E3C5E3D4ADEAA1190819D5 /* Date+Relative.swift in Sources */ = {isa = PBXBuildFile; fileRef = 378B4A32655676535AA28300 /* Date+Relative.swift */; };
 		58A04F669F41C38DDB049244 /* ClaudeService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BDF00BB733AC1E163A68F18 /* ClaudeService.swift */; };
 		59E9E2609E122A6EE481F202 /* EPUBParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = A30C0A0AD283C97CC7C42C5B /* EPUBParser.swift */; };
 		5B6D813549A140074424A64F /* SearchState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 468A81A3E599A1B8D192F53A /* SearchState.swift */; };
@@ -50,6 +51,7 @@
 		B662E8BA016D50312ADB068F /* selection-ios.js in Resources */ = {isa = PBXBuildFile; fileRef = F4E95A7A3E0D765339F178CF /* selection-ios.js */; };
 		BEC827A52FCA9E82F6B01781 /* reader.css in Resources */ = {isa = PBXBuildFile; fileRef = EC24A21BACE84169363F5313 /* reader.css */; };
 		C01FD3E7DFF8FEE77CAF2AD3 /* EPUBParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = A30C0A0AD283C97CC7C42C5B /* EPUBParser.swift */; };
+		C32E7D4252E081B04CF80D64 /* Date+Relative.swift in Sources */ = {isa = PBXBuildFile; fileRef = 378B4A32655676535AA28300 /* Date+Relative.swift */; };
 		CB48426C19AB0B6310EB7DA0 /* Annotations.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E489CD45CEF897A465CC0A5 /* Annotations.swift */; };
 		CE5A900A9EBE3EEC8C4CEF9C /* margin-notes.js in Resources */ = {isa = PBXBuildFile; fileRef = BB36689F00CD72DC8F0D76B9 /* margin-notes.js */; };
 		CFDB6ED0DED2FE0AF61F41F6 /* InlineSearchBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE2367A38B8BBA156AB7BE64 /* InlineSearchBar.swift */; };
@@ -84,6 +86,7 @@
 		19FE50F25D3D54079CFB8E66 /* LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryView.swift; sourceTree = "<group>"; };
 		2E7F09EAF0FF169EE6AB5B67 /* reader-template.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = "reader-template.html"; sourceTree = "<group>"; };
 		330C82093A09062B3137488D /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		378B4A32655676535AA28300 /* Date+Relative.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Date+Relative.swift"; sourceTree = "<group>"; };
 		468A81A3E599A1B8D192F53A /* SearchState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchState.swift; sourceTree = "<group>"; };
 		501099F465AFF4BA5C12D0DA /* ThreadPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThreadPanel.swift; sourceTree = "<group>"; };
 		5B00C0280A9B0342C485872F /* CruxTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CruxTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -204,6 +207,7 @@
 			isa = PBXGroup;
 			children = (
 				A7957B2E496930FED00FF211 /* CruxApp.swift */,
+				CC8562FFE3C029300C872EDF /* Extensions */,
 				5E0EA413FB80C03E939B6FE9 /* Models */,
 				F333CAF5D0078D26FD5ACA03 /* Services */,
 				D82FB6FE7C6554E01A554022 /* Views */,
@@ -216,6 +220,14 @@
 			children = (
 			);
 			path = macOS;
+			sourceTree = "<group>";
+		};
+		CC8562FFE3C029300C872EDF /* Extensions */ = {
+			isa = PBXGroup;
+			children = (
+				378B4A32655676535AA28300 /* Date+Relative.swift */,
+			);
+			path = Extensions;
 			sourceTree = "<group>";
 		};
 		D82FB6FE7C6554E01A554022 /* Views */ = {
@@ -404,6 +416,7 @@
 				9B749F6C546D2DBF73BCE489 /* ClaudeService.swift in Sources */,
 				E85A3576347EAB487C78E9CD /* ContentView.swift in Sources */,
 				FF70A0BB4CD24E376F117334 /* CruxApp.swift in Sources */,
+				C32E7D4252E081B04CF80D64 /* Date+Relative.swift in Sources */,
 				C01FD3E7DFF8FEE77CAF2AD3 /* EPUBParser.swift in Sources */,
 				D945F2C79DD58583F4FD559A /* EPUBWebViewRepresentable.swift in Sources */,
 				0BB7DF434AC7DEB13A4B6E3D /* HTMLTextExtractor.swift in Sources */,
@@ -438,6 +451,7 @@
 				58A04F669F41C38DDB049244 /* ClaudeService.swift in Sources */,
 				94A9499C70665FEAA83413FF /* ContentView.swift in Sources */,
 				A7369AE2C3C619DDE20ED127 /* CruxApp.swift in Sources */,
+				51E3C5E3D4ADEAA1190819D5 /* Date+Relative.swift in Sources */,
 				59E9E2609E122A6EE481F202 /* EPUBParser.swift in Sources */,
 				2E31250F1797705B64B851A0 /* EPUBWebViewRepresentable.swift in Sources */,
 				EC3A74C0483EF6D4AD85CB1F /* HTMLTextExtractor.swift in Sources */,

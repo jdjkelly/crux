@@ -193,4 +193,116 @@ final class ViewportTrackingTests: XCTestCase {
             onUpdate(chapterIndex)
         }
     }
+
+    // MARK: - Scroll Position Tests
+
+    func testScrollPositionStoredInUpdateProgress() {
+        let book = StoredBook(id: UUID(), title: "Test Book", totalChapters: 10)
+
+        book.updateProgress(chapter: 5, total: 10, scroll: 0.75)
+
+        XCTAssertEqual(book.currentChapterIndex, 5)
+        XCTAssertEqual(book.scrollPosition, 0.75, accuracy: 0.001)
+    }
+
+    func testScrollPositionDefaultsToZero() {
+        let book = StoredBook(id: UUID(), title: "Test Book", totalChapters: 10)
+
+        XCTAssertEqual(book.scrollPosition, 0)
+    }
+
+    func testScrollPositionPreservedOnChapterChange() {
+        let book = StoredBook(id: UUID(), title: "Test Book", totalChapters: 10)
+
+        book.updateProgress(chapter: 3, total: 10, scroll: 0.5)
+        book.updateProgress(chapter: 4, total: 10, scroll: 0.0)
+
+        XCTAssertEqual(book.currentChapterIndex, 4)
+        XCTAssertEqual(book.scrollPosition, 0.0)
+    }
+
+    func testFinishedOnlyWhenNearEndOfLastChapter() {
+        let book = StoredBook(id: UUID(), title: "Test Book", totalChapters: 10)
+
+        // At last chapter but not scrolled far
+        book.updateProgress(chapter: 9, total: 10, scroll: 0.5)
+        XCTAssertFalse(book.isFinished)
+
+        // At last chapter and scrolled past 90%
+        book.updateProgress(chapter: 9, total: 10, scroll: 0.95)
+        XCTAssertTrue(book.isFinished)
+    }
+
+    func testScrollPositionBoundaries() {
+        let book = StoredBook(id: UUID(), title: "Test Book", totalChapters: 10)
+
+        // Test 0%
+        book.updateProgress(chapter: 0, total: 10, scroll: 0.0)
+        XCTAssertEqual(book.scrollPosition, 0.0)
+
+        // Test 100%
+        book.updateProgress(chapter: 0, total: 10, scroll: 1.0)
+        XCTAssertEqual(book.scrollPosition, 1.0)
+    }
+
+    func testScrollPositionWithVisibleSectionHandler() {
+        var capturedScroll: Double = 0
+        var capturedChapter: Int = 0
+
+        let handler = createVisibleSectionHandlerWithScroll(
+            isNavigating: false,
+            currentIndex: 0,
+            chapterCount: 10,
+            onUpdate: { chapter, scroll in
+                capturedChapter = chapter
+                capturedScroll = scroll
+            }
+        )
+
+        handler(5, 0.75)
+
+        XCTAssertEqual(capturedChapter, 5)
+        XCTAssertEqual(capturedScroll, 0.75, accuracy: 0.001)
+    }
+
+    func testScrollPositionUpdatedEvenWhenChapterUnchanged() {
+        var scrollUpdates: [Double] = []
+
+        let handler = createVisibleSectionHandlerWithScroll(
+            isNavigating: false,
+            currentIndex: 3,
+            chapterCount: 10,
+            onUpdate: { _, scroll in
+                scrollUpdates.append(scroll)
+            }
+        )
+
+        // Same chapter, different scroll positions
+        handler(3, 0.25)
+        handler(3, 0.50)
+        handler(3, 0.75)
+
+        // All scroll updates should be captured even though chapter didn't change
+        XCTAssertEqual(scrollUpdates.count, 3)
+    }
+
+    func createVisibleSectionHandlerWithScroll(
+        isNavigating: Bool,
+        currentIndex: Int,
+        chapterCount: Int,
+        onUpdate: @escaping (Int, Double) -> Void
+    ) -> (Int, Double) -> Void {
+        return { chapterIndex, scrollPosition in
+            // Guard against feedback loops during programmatic navigation
+            guard !isNavigating else { return }
+
+            // Always track scroll position
+            // Update chapter if changed
+            if chapterIndex != currentIndex {
+                guard chapterIndex >= 0 && chapterIndex < chapterCount else { return }
+            }
+
+            onUpdate(chapterIndex, scrollPosition)
+        }
+    }
 }

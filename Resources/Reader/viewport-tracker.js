@@ -94,7 +94,8 @@ const CruxViewportTracker = {
             this.currentTopAnchor = topAnchor.id;
             window.webkit.messageHandlers.visibleSection.postMessage({
                 anchorId: topAnchor.id,
-                chapterIndex: topAnchor.chapterIndex
+                chapterIndex: topAnchor.chapterIndex,
+                scrollPosition: CruxHighlighter.getScrollPosition()
             });
         }
     },

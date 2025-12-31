@@ -20,7 +20,7 @@ struct EPUBWebViewRepresentable: PlatformViewRepresentable {
     let onMarginNoteAction: ((MarginNoteAction) -> Void)?
     let onSearchResults: ((Int, Int) -> Void)?
     let onContentLoaded: (() -> Void)?
-    let onVisibleSection: ((Int) -> Void)?
+    let onVisibleSection: ((Int, Double) -> Void)?
 
     func makeCoordinator() -> WebViewCoordinator {
         WebViewCoordinator(
@@ -117,7 +117,7 @@ class WebViewCoordinator: NSObject, WKNavigationDelegate, WKScriptMessageHandler
     let onMarginNoteAction: ((MarginNoteAction) -> Void)?
     let onSearchResults: ((Int, Int) -> Void)?
     let onContentLoaded: (() -> Void)?
-    let onVisibleSection: ((Int) -> Void)?
+    let onVisibleSection: ((Int, Double) -> Void)?
 
     var lastLoadedHTML: String = ""
     var pendingHighlights: [Highlight] = []
@@ -132,7 +132,7 @@ class WebViewCoordinator: NSObject, WKNavigationDelegate, WKScriptMessageHandler
         onMarginNoteAction: ((MarginNoteAction) -> Void)?,
         onSearchResults: ((Int, Int) -> Void)?,
         onContentLoaded: (() -> Void)?,
-        onVisibleSection: ((Int) -> Void)?
+        onVisibleSection: ((Int, Double) -> Void)?
     ) {
         self.onTextSelected = onTextSelected
         self.onHighlightTapped = onHighlightTapped
@@ -236,8 +236,9 @@ class WebViewCoordinator: NSObject, WKNavigationDelegate, WKScriptMessageHandler
             }
         } else if message.name == "visibleSection", let body = message.body as? [String: Any] {
             if let chapterIndex = body["chapterIndex"] as? Int {
+                let scrollPosition = body["scrollPosition"] as? Double ?? 0
                 DispatchQueue.main.async {
-                    self.onVisibleSection?(chapterIndex)
+                    self.onVisibleSection?(chapterIndex, scrollPosition)
                 }
             }
         }

@@ -196,5 +196,20 @@ const CruxHighlighter = {
             return true;
         }
         return false;
+    },
+
+    // Scroll position as 0.0-1.0 percentage
+    getScrollPosition: function() {
+        const scrollTop = window.scrollY || document.documentElement.scrollTop;
+        const scrollHeight = document.documentElement.scrollHeight - window.innerHeight;
+        if (scrollHeight <= 0) return 0;
+        return Math.min(1, Math.max(0, scrollTop / scrollHeight));
+    },
+
+    setScrollPosition: function(percentage) {
+        const scrollHeight = document.documentElement.scrollHeight - window.innerHeight;
+        if (scrollHeight <= 0) return;
+        const scrollTop = percentage * scrollHeight;
+        window.scrollTo({ top: scrollTop, behavior: 'instant' });
     }
 };

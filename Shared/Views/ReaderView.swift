@@ -22,6 +22,8 @@ struct ReaderView: View {
     @State private var pendingFragment: String? = nil
     @State private var previousFilePath: String? = nil
     @State private var isNavigatingProgrammatically = false
+    @State private var currentScrollPosition: Double = 0
+    @State private var pendingScrollPosition: Double? = nil
 
     private var storedBook: StoredBook? {
         storedBooks.first { $0.id == bookId }
@@ -30,6 +32,11 @@ struct ReaderView: View {
     var currentChapter: Chapter? {
         guard currentChapterIndex < book.chapters.count else { return nil }
         return book.chapters[currentChapterIndex]
+    }
+
+    private var bookProgress: Double {
+        guard book.chapters.count > 0 else { return 0 }
+        return Double(currentChapterIndex) / Double(book.chapters.count)
     }
 
     var currentChapterHighlights: [Highlight] {
@@ -194,9 +201,10 @@ struct ReaderView: View {
                     onContentLoaded: {
                         scrollToFragmentOrTop()
                         initializeViewportTracking()
+                        restoreScrollPositionIfNeeded()
                     },
-                    onVisibleSection: { chapterIndex in
-                        handleVisibleSectionChange(chapterIndex)
+                    onVisibleSection: { chapterIndex, scrollPosition in
+                        handleVisibleSectionChange(chapterIndex, scrollPosition: scrollPosition)
                     }
                 )
             } else {
@@ -233,6 +241,19 @@ struct ReaderView: View {
             }
             .padding()
             .background(.bar)
+
+            // Progress bar
+            GeometryReader { geo in
+                Rectangle()
+                    .fill(Color.secondary.opacity(0.2))
+                    .frame(height: 3)
+                    .overlay(alignment: .leading) {
+                        Rectangle()
+                            .fill(Color.secondary)
+                            .frame(width: geo.size.width * bookProgress)
+                    }
+            }
+            .frame(height: 3)
         }
         .navigationTitle(book.title)
         .toolbar {
@@ -473,7 +494,7 @@ struct ReaderView: View {
     }
 
     private func saveProgress() {
-        storedBook?.updateProgress(chapter: currentChapterIndex, total: book.chapters.count)
+        storedBook?.updateProgress(chapter: currentChapterIndex, total: book.chapters.count, scroll: currentScrollPosition)
     }
 
     private func scrollToFragmentOrTop() {
@@ -490,17 +511,20 @@ struct ReaderView: View {
         }
     }
 
-    private func handleVisibleSectionChange(_ chapterIndex: Int) {
+    private func handleVisibleSectionChange(_ chapterIndex: Int, scrollPosition: Double) {
+        // Always track scroll position
+        currentScrollPosition = scrollPosition
+
         // Guard against feedback loops during programmatic navigation
         guard !isNavigatingProgrammatically else { return }
-        // No update needed if index hasn't changed
-        guard chapterIndex != currentChapterIndex else { return }
-        // Validate index
-        guard chapterIndex >= 0 && chapterIndex < book.chapters.count else { return }
 
-        // Update current chapter based on scroll position
-        currentChapterIndex = chapterIndex
-        previousFilePath = book.chapters[chapterIndex].filePath
+        // Update chapter if changed
+        if chapterIndex != currentChapterIndex {
+            guard chapterIndex >= 0 && chapterIndex < book.chapters.count else { return }
+            currentChapterIndex = chapterIndex
+            previousFilePath = book.chapters[chapterIndex].filePath
+        }
+
         saveProgress()
     }
 
@@ -527,9 +551,10 @@ struct ReaderView: View {
     }
 
     private func loadState() async {
-        // Load saved chapter position
+        // Load saved chapter position and scroll
         if let stored = storedBook {
             currentChapterIndex = min(stored.currentChapterIndex, book.chapters.count - 1)
+            pendingScrollPosition = stored.scrollPosition
         }
 
         // Initialize file path tracking
@@ -542,6 +567,16 @@ struct ReaderView: View {
             annotations = try await BookStorage.shared.loadAnnotations(for: bookId)
         } catch {
             annotations = BookAnnotations(bookId: bookId)
+        }
+    }
+
+    private func restoreScrollPositionIfNeeded() {
+        guard let scrollPosition = pendingScrollPosition, scrollPosition > 0 else { return }
+        pendingScrollPosition = nil
+
+        // Small delay to ensure content is fully rendered
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            evaluateJavaScript("CruxHighlighter.setScrollPosition(\(scrollPosition));")
         }
     }
 
@@ -664,7 +699,7 @@ struct EPUBWebView: View {
     var onMarginNoteAction: ((MarginNoteAction) -> Void)? = nil
     var onSearchResults: ((Int, Int) -> Void)? = nil
     var onContentLoaded: (() -> Void)? = nil
-    var onVisibleSection: ((Int) -> Void)? = nil
+    var onVisibleSection: ((Int, Double) -> Void)? = nil
 
     var body: some View {
         EPUBWebViewRepresentable(

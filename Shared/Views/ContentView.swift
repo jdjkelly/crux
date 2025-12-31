@@ -71,6 +71,9 @@ struct ContentView: View {
                     .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))
             }
         }
+        .task {
+            await recoverOrphanedBooks()
+        }
     }
 
     private func deleteBook(_ book: StoredBook) {
@@ -107,13 +110,24 @@ struct ContentView: View {
             // Parse the book
             let book = try await parser.parse(url: storedURL)
 
-            // Create SwiftData record
+            // Create SwiftData record with full metadata
             let storedBook = StoredBook(
                 id: bookId,
                 title: book.title,
                 author: book.author,
                 totalChapters: book.chapters.count
             )
+            // Cache additional metadata
+            storedBook.language = book.metadata.language
+            storedBook.publisher = book.metadata.publisher
+            storedBook.bookDescription = book.metadata.description
+            if let pubDate = book.metadata.publicationDate {
+                storedBook.publicationYear = Calendar.current.component(.year, from: pubDate)
+            }
+            if !book.metadata.subjects.isEmpty,
+               let jsonData = try? JSONEncoder().encode(book.metadata.subjects) {
+                storedBook.subjectsJSON = String(data: jsonData, encoding: .utf8)
+            }
             modelContext.insert(storedBook)
             try modelContext.save()
 
@@ -140,6 +154,45 @@ struct ContentView: View {
             selectedBook = book
         } catch {
             self.error = error
+        }
+    }
+
+    /// Recovers books that exist in storage but not in SwiftData (e.g., after schema migration)
+    private func recoverOrphanedBooks() async {
+        do {
+            let storedIds = try await storage.listStoredBookIds()
+            let knownIds = Set(storedBooks.map { $0.id })
+
+            for bookId in storedIds where !knownIds.contains(bookId) {
+                // Parse the orphaned book
+                let url = await storage.bookURL(for: bookId)
+                guard let book = try? await parser.parse(url: url) else { continue }
+
+                // Recreate SwiftData entry
+                let storedBook = StoredBook(
+                    id: bookId,
+                    title: book.title,
+                    author: book.author,
+                    totalChapters: book.chapters.count
+                )
+                storedBook.language = book.metadata.language
+                storedBook.publisher = book.metadata.publisher
+                storedBook.bookDescription = book.metadata.description
+                if let pubDate = book.metadata.publicationDate {
+                    storedBook.publicationYear = Calendar.current.component(.year, from: pubDate)
+                }
+                if !book.metadata.subjects.isEmpty,
+                   let jsonData = try? JSONEncoder().encode(book.metadata.subjects) {
+                    storedBook.subjectsJSON = String(data: jsonData, encoding: .utf8)
+                }
+                modelContext.insert(storedBook)
+            }
+
+            if !storedIds.isEmpty {
+                try? modelContext.save()
+            }
+        } catch {
+            // Silent failure - recovery is best-effort
         }
     }
 }

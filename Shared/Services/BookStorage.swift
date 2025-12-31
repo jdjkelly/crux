@@ -98,4 +98,31 @@ actor BookStorage {
             try fileManager.removeItem(at: url)
         }
     }
+
+    // MARK: - Annotation Stats
+
+    func loadAnnotationStats(for bookId: UUID) -> AnnotationStats {
+        let url = annotationsURL(for: bookId)
+        guard fileManager.fileExists(atPath: url.path),
+              let data = try? Data(contentsOf: url) else {
+            return AnnotationStats(highlightCount: 0, threadCount: 0)
+        }
+
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+
+        guard let annotations = try? decoder.decode(BookAnnotations.self, from: data) else {
+            return AnnotationStats(highlightCount: 0, threadCount: 0)
+        }
+
+        let highlightCount = annotations.highlights.count
+        let threadCount = annotations.highlights.reduce(0) { $0 + $1.threads.count }
+
+        return AnnotationStats(highlightCount: highlightCount, threadCount: threadCount)
+    }
+}
+
+struct AnnotationStats {
+    let highlightCount: Int
+    let threadCount: Int
 }
