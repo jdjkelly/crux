@@ -54,16 +54,154 @@ actor EPUBParser {
     }
 
     private func extractZip(from zipURL: URL, to destination: URL) async throws {
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/unzip")
-        process.arguments = ["-q", zipURL.path, "-d", destination.path]
+        let zipData = try Data(contentsOf: zipURL)
+        try extractZipData(zipData, to: destination)
+    }
 
-        try process.run()
-        process.waitUntilExit()
+    // MARK: - Pure Swift ZIP Extraction
 
-        guard process.terminationStatus == 0 else {
-            throw EPUBParserError.invalidEPUB
+    private func extractZipData(_ data: Data, to destination: URL) throws {
+        var offset = 0
+
+        while offset + 30 <= data.count {
+            // Check for local file header signature: 0x04034b50 (little-endian: 50 4b 03 04)
+            let sig = data.subdata(in: offset..<offset+4)
+            guard sig == Data([0x50, 0x4b, 0x03, 0x04]) else {
+                // Not a local file header - might be central directory or end of zip
+                break
+            }
+
+            // Parse local file header
+            let generalPurpose = readUInt16(data, at: offset + 6)
+            let compressionMethod = readUInt16(data, at: offset + 8)
+            let compressedSize = readUInt32(data, at: offset + 18)
+            let uncompressedSize = readUInt32(data, at: offset + 22)
+            let fileNameLength = Int(readUInt16(data, at: offset + 26))
+            let extraFieldLength = Int(readUInt16(data, at: offset + 28))
+
+            let fileNameStart = offset + 30
+            let fileNameEnd = fileNameStart + fileNameLength
+
+            guard fileNameEnd <= data.count else {
+                throw EPUBParserError.invalidEPUB
+            }
+
+            let fileNameData = data.subdata(in: fileNameStart..<fileNameEnd)
+            guard let fileName = String(data: fileNameData, encoding: .utf8) else {
+                throw EPUBParserError.invalidEPUB
+            }
+
+            let dataStart = fileNameEnd + extraFieldLength
+
+            // Handle data descriptor (bit 3 of general purpose flag)
+            var actualCompressedSize = Int(compressedSize)
+            var actualUncompressedSize = Int(uncompressedSize)
+
+            if (generalPurpose & 0x08) != 0 && compressedSize == 0 {
+                // Data descriptor follows - need to find it by scanning
+                // For simplicity, we'll search for the next local file header or central directory
+                if let nextHeader = findNextZipHeader(in: data, from: dataStart) {
+                    actualCompressedSize = nextHeader - dataStart
+                    // Check if there's a data descriptor (12 or 16 bytes before next header)
+                    if nextHeader >= dataStart + 16 {
+                        let potentialSig = data.subdata(in: (nextHeader - 16)..<(nextHeader - 12))
+                        if potentialSig == Data([0x50, 0x4b, 0x07, 0x08]) {
+                            actualCompressedSize = nextHeader - 16 - dataStart
+                        }
+                    }
+                }
+            }
+
+            let dataEnd = dataStart + actualCompressedSize
+
+            guard dataEnd <= data.count else {
+                throw EPUBParserError.invalidEPUB
+            }
+
+            let compressedData = data.subdata(in: dataStart..<dataEnd)
+
+            // Create file path
+            let filePath = destination.appendingPathComponent(fileName)
+
+            // Handle directories
+            if fileName.hasSuffix("/") {
+                try fileManager.createDirectory(at: filePath, withIntermediateDirectories: true)
+            } else {
+                // Ensure parent directory exists
+                let parentDir = filePath.deletingLastPathComponent()
+                try fileManager.createDirectory(at: parentDir, withIntermediateDirectories: true)
+
+                // Decompress and write file
+                let decompressedData: Data
+
+                switch compressionMethod {
+                case 0: // Stored (no compression)
+                    decompressedData = compressedData
+                case 8: // Deflate
+                    decompressedData = try decompressDeflate(compressedData, expectedSize: actualUncompressedSize > 0 ? actualUncompressedSize : compressedData.count * 4)
+                default:
+                    throw EPUBParserError.parsingFailed("Unsupported compression method: \(compressionMethod)")
+                }
+
+                try decompressedData.write(to: filePath)
+            }
+
+            offset = dataEnd
         }
+    }
+
+    private func findNextZipHeader(in data: Data, from start: Int) -> Int? {
+        var i = start
+        while i + 4 <= data.count {
+            let sig = data.subdata(in: i..<i+4)
+            // Local file header or central directory header
+            if sig == Data([0x50, 0x4b, 0x03, 0x04]) || sig == Data([0x50, 0x4b, 0x01, 0x02]) {
+                return i
+            }
+            i += 1
+        }
+        return data.count
+    }
+
+    private func readUInt16(_ data: Data, at offset: Int) -> UInt16 {
+        return UInt16(data[offset]) | (UInt16(data[offset + 1]) << 8)
+    }
+
+    private func readUInt32(_ data: Data, at offset: Int) -> UInt32 {
+        return UInt32(data[offset]) |
+               (UInt32(data[offset + 1]) << 8) |
+               (UInt32(data[offset + 2]) << 16) |
+               (UInt32(data[offset + 3]) << 24)
+    }
+
+    private func decompressDeflate(_ data: Data, expectedSize: Int) throws -> Data {
+        // Use raw DEFLATE (no zlib header) - ZIP uses raw deflate
+        let bufferSize = max(expectedSize, 65536)
+        var decompressed = Data(count: bufferSize)
+
+        let result = data.withUnsafeBytes { sourcePtr -> Int in
+            decompressed.withUnsafeMutableBytes { destPtr -> Int in
+                guard let sourceBase = sourcePtr.baseAddress,
+                      let destBase = destPtr.baseAddress else { return 0 }
+
+                let decodedSize = compression_decode_buffer(
+                    destBase.assumingMemoryBound(to: UInt8.self),
+                    bufferSize,
+                    sourceBase.assumingMemoryBound(to: UInt8.self),
+                    data.count,
+                    nil,
+                    COMPRESSION_ZLIB  // Note: This handles raw deflate
+                )
+                return decodedSize
+            }
+        }
+
+        guard result > 0 else {
+            throw EPUBParserError.parsingFailed("Decompression failed")
+        }
+
+        decompressed.removeSubrange(result..<decompressed.count)
+        return decompressed
     }
 
     private func parseContainer(_ data: Data) throws -> String {
