@@ -87,3 +87,15 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.crux.tests
         GENERATE_INFOPLIST_FILE: YES
+
+  CruxUITests:
+    type: bundle.ui-testing
+    platform: macOS
+    sources:
+      - path: UITests
+    dependencies:
+      - target: Crux_macOS
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.crux.uitests
+        GENERATE_INFOPLIST_FILE: YES

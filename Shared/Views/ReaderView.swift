@@ -36,7 +36,18 @@ struct ReaderView: View {
 
     private var bookProgress: Double {
         guard book.chapters.count > 0 else { return 0 }
-        return Double(currentChapterIndex) / Double(book.chapters.count)
+        // Include within-chapter progress for smoother overall progress
+        let chapterProgress = Double(currentChapterIndex) / Double(book.chapters.count)
+        let withinChapterProgress = currentScrollPosition / Double(book.chapters.count)
+        return chapterProgress + withinChapterProgress
+    }
+
+    private var chapterPercentage: Int {
+        Int(currentScrollPosition * 100)
+    }
+
+    private var overallPercentage: Int {
+        Int(bookProgress * 100)
     }
 
     var currentChapterHighlights: [Highlight] {
@@ -214,21 +225,48 @@ struct ReaderView: View {
             }
 
             // Navigation bar
-            HStack {
+            HStack(spacing: 16) {
                 Button {
                     navigateToChapter(currentChapterIndex - 1)
                 } label: {
                     Image(systemName: "chevron.left")
                 }
                 .disabled(currentChapterIndex == 0)
+                .accessibilityIdentifier("previousChapter")
 
                 Spacer()
 
-                if let chapter = currentChapter {
-                    Text(chapter.title)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                // Position indicator
+                VStack(spacing: 2) {
+                    if let chapter = currentChapter {
+                        Text(chapter.title)
+                            .font(.caption)
+                            .foregroundStyle(.primary)
+                            .lineLimit(1)
+                            .accessibilityIdentifier("chapterTitle")
+                    }
+                    HStack(spacing: 8) {
+                        Text("Ch \(currentChapterIndex + 1)/\(book.chapters.count)")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                            .accessibilityIdentifier("chapterPosition")
+                        Text("•")
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+                        Text("\(chapterPercentage)% in chapter")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                            .accessibilityIdentifier("chapterPercentage")
+                        Text("•")
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+                        Text("\(overallPercentage)% overall")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                            .accessibilityIdentifier("overallPercentage")
+                    }
                 }
+                .accessibilityIdentifier("positionIndicator")
 
                 Spacer()
 
@@ -238,22 +276,49 @@ struct ReaderView: View {
                     Image(systemName: "chevron.right")
                 }
                 .disabled(currentChapterIndex >= book.chapters.count - 1)
+                .accessibilityIdentifier("nextChapter")
             }
             .padding()
             .background(.bar)
+            .accessibilityIdentifier("navigationBar")
 
-            // Progress bar
+            // Progress bar - shows chapter boundaries with current position
             GeometryReader { geo in
-                Rectangle()
-                    .fill(Color.secondary.opacity(0.2))
-                    .frame(height: 3)
-                    .overlay(alignment: .leading) {
-                        Rectangle()
-                            .fill(Color.secondary)
-                            .frame(width: geo.size.width * bookProgress)
+                let chapterWidth = geo.size.width / CGFloat(max(1, book.chapters.count))
+
+                ZStack(alignment: .leading) {
+                    // Background
+                    Rectangle()
+                        .fill(Color.secondary.opacity(0.15))
+
+                    // Completed chapters
+                    Rectangle()
+                        .fill(Color.accentColor.opacity(0.6))
+                        .frame(width: chapterWidth * CGFloat(currentChapterIndex))
+
+                    // Current chapter progress
+                    Rectangle()
+                        .fill(Color.accentColor)
+                        .frame(width: chapterWidth * CGFloat(currentChapterIndex) + chapterWidth * currentScrollPosition)
+
+                    // Chapter tick marks
+                    HStack(spacing: 0) {
+                        ForEach(0..<book.chapters.count, id: \.self) { i in
+                            Rectangle()
+                                .fill(Color.clear)
+                                .frame(width: chapterWidth)
+                                .overlay(alignment: .trailing) {
+                                    if i < book.chapters.count - 1 {
+                                        Rectangle()
+                                            .fill(Color.primary.opacity(0.2))
+                                            .frame(width: 1)
+                                    }
+                                }
+                        }
                     }
+                }
             }
-            .frame(height: 3)
+            .frame(height: 4)
         }
         .navigationTitle(book.title)
         .toolbar {
@@ -574,9 +639,19 @@ struct ReaderView: View {
         guard let scrollPosition = pendingScrollPosition, scrollPosition > 0 else { return }
         pendingScrollPosition = nil
 
-        // Small delay to ensure content is fully rendered
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+        // Set navigation guard to prevent the scroll from updating our saved position
+        isNavigatingProgrammatically = true
+        evaluateJavaScript("CruxViewportTracker.beginProgrammaticNavigation();")
+
+        // Delay to ensure content is fully rendered before restoring position
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
             evaluateJavaScript("CruxHighlighter.setScrollPosition(\(scrollPosition));")
+
+            // End programmatic navigation after scroll settles
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                isNavigatingProgrammatically = false
+                evaluateJavaScript("CruxViewportTracker.endProgrammaticNavigation();")
+            }
         }
     }
 
